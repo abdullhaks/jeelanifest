@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: jeelanifest-api
+    env: docker
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    plan: starter
+    region: singapore
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT_NUMBER
+        value: 3000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: ORIGINS
+        value: "https://jeelanifest.vercel.app, https://www.jeelanifest.vercel.app"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: "none"
+      - key: ADMIN_PASSKEY
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
