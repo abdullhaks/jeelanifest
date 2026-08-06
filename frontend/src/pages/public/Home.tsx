@@ -71,7 +71,6 @@ const Home = () => {
   const [activeTab, setActiveTab] = useState('overall');
   const [chartFilter, setChartFilter] = useState<'overall' | 'group' | 'subJunior' | 'junior' | 'senior'>('overall');
   const [stats, setStats] = useState({ groupCount: 0, studentCount: 0, competitionCount: 0 });
-  const [posters, setPosters] = useState<any[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Selected Group Modal
@@ -82,7 +81,6 @@ const Home = () => {
   const fetchStudents = () => apiClient.get('/public/dashboard/students').then(res => setStudents(res.data));
   const fetchOngoing = () => apiClient.get('/public/dashboard/ongoing-programs').then(res => setOngoingPrograms(res.data));
   const fetchStats = () => apiClient.get('/public/dashboard/stats').then(res => setStats(res.data));
-  const fetchPosters = () => apiClient.get('/posters?limit=6').then(res => setPosters(res.data.data));
   const [chartData, setChartData] = useState<any[]>([]);
 
   const fetchChartData = (filter: string) => {
@@ -103,7 +101,6 @@ const Home = () => {
     fetchStudents();
     fetchOngoing();
     fetchStats();
-    fetchPosters();
     fetchChartData(chartFilter);
 
     const socketUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
@@ -139,7 +136,6 @@ const Home = () => {
   const heroY = useTransform(scrollYProgress, [0, 0.3], [0, 60]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.25], [1, 0]);
 
-  const maxGroupPoints = Math.max(...groups.map(g => g.points), 1);
   const filteredStudents = students.filter(s => activeTab === 'overall' || s.category.toLowerCase() === activeTab.toLowerCase()).slice(0, 10);
 
   const handleOpenGroup = (groupId: string) => {

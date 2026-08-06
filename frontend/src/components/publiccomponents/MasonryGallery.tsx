@@ -14,7 +14,7 @@ interface MasonryGalleryProps {
   loading?: boolean;
 }
 
-export const MasonryGallery: React.FC<MasonryGalleryProps> = ({ items, loading = false }) => {
+export const MasonryGallery: React.FC<MasonryGalleryProps> = ({ items }) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   // Keyboard navigation for Lightbox Viewer Container

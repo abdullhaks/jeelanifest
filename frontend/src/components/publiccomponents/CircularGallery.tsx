@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface CircularItem {
   id: string | number;
@@ -83,8 +83,6 @@ export const CircularGallery: React.FC<CircularGalleryProps> = ({ items = defaul
             if (angle > 180) angle -= 360;
 
             const isCenter = offset === 0;
-            const isLeft = offset === count - 1 || angle < 0;
-            const isRight = offset === 1 || angle > 0;
 
             // Scale & Translate X/Z for 3D Carousel arc
             let x = 0;

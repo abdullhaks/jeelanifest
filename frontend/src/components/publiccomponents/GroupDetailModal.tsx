@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Spin, Avatar, Tag } from 'antd';
-import { TrophyOutlined, UserOutlined, FireOutlined } from '@ant-design/icons';
+import { TrophyOutlined, FireOutlined } from '@ant-design/icons';
 import apiClient from '../../services/apiClient';
 
 interface GroupDetailModalProps {

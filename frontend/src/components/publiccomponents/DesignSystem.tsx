@@ -174,7 +174,7 @@ export const SectionHeading: React.FC<{
   className?: string;
 }> = ({ title, titleAr, subtitle, centered = true, className = '' }) => {
   return (
-    <div className={`mb-10 text-center ${className}`}>
+    <div className={`mb-10 ${centered ? 'text-center' : 'text-left'} ${className}`}>
       {titleAr && (
         <div className="font-display-ar text-amber-600 font-bold text-xl md:text-2xl mb-1.5" dir="rtl">
           {titleAr}

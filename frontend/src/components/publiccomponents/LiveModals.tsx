@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { useModalStore } from '../../store/modalStore';
-import { GlassCard, LiveBadge } from './DesignSystem';
+import { GlassCard } from './DesignSystem';
 import apiClient from '../../services/apiClient';
 
 export const LiveModals: React.FC = () => {
