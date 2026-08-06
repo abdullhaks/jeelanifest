@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-const uri = 'mongodb+srv://aks4u786_db_user:MbAO6GB9SGr9BC0I@cluster0.9ie04ig.mongodb.net/festDB';
 
 async function run() {
   await mongoose.connect(uri);
