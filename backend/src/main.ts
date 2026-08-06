@@ -11,7 +11,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT_NUMBER', 3000);
   const origins = configService
-    .get<string>('ORIGINS', 'http://localhost:5173')
+    .get<string>('origins', 'http://localhost:5173')
     .split(',')
     .map((o) => o.trim());
 
