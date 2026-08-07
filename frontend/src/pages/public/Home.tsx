@@ -13,6 +13,7 @@ import { useModalStore } from '../../store/modalStore';
 import { GroupDetailModal } from '../../components/publiccomponents/GroupDetailModal';
 import { CircularGallery } from '../../components/publiccomponents/CircularGallery';
 import { MagicCard, MagicBento } from '../../components/publiccomponents/MagicBento';
+import { Trophy, Award, Users, Image as ImageIcon, BarChart3, Compass, Crown, Star } from 'lucide-react';
 
 const groupColors = ['#0284C7', '#10B981', '#D97706', '#7C3AED', '#EC4899', '#06B6D4', '#8B5CF6'];
 
@@ -73,10 +74,64 @@ const slides = [
   },
 ];
 
-const dummyCoordinators = [
-  { name: 'Ahmad Abdullah', role: 'Chief Organizer', photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop' },
-  { name: 'Fatima Zahra', role: 'Stage Manager', photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop' },
-  { name: 'Zayed Hassan', role: 'Creative Director', photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop' },
+const coordinatorMembers = [
+  {
+    id: 1,
+    name: 'SHEIKH MUHAMMED ABDUL MAJEED HUDAWI. POONGOD',
+    role: 'CHAIRMAN JEELANI FEST 26',
+    isChairman: true,
+    photo: 'https://res.cloudinary.com/mqorn88v/image/upload/v1786117104/mj_nk2rhe.png',
+    tag: 'Executive Chairman',
+    bio: 'Chief orchestrator and executive vision leader of Jeelani Fest 2026.',
+  },
+  {
+    id: 2,
+    name: 'Muhammed Nameer Jeelani. Valapuram',
+    role: 'GENERAL CONVENOR JEELANI FEST 26',
+    isChairman: false,
+    photo: 'https://res.cloudinary.com/mqorn88v/image/upload/v1786117310/ChatGPT_Image_Aug_7_2026_09_11_04_PM_kzhbnf.png',
+    tag: 'Convener',
+  },
+  {
+    id: 3,
+    name: 'Gulam Muhammed Sharafullah Jeelani. Valapuram',
+    role: 'JOIN CONVENIR JEELANI FEST 26',
+    isChairman: false,
+    photo: 'https://res.cloudinary.com/mqorn88v/image/upload/v1786116891/gulam_ypk2lc.jpg',
+    tag: 'Advisory Lead',
+  },
+  {
+    id: 4,
+    name: 'AliShan Shad Jeelani .Manjery',
+    role: 'JOIN CONVENIR JEELANI FEST 26',
+    isChairman: false,
+    photo: 'https://res.cloudinary.com/mqorn88v/image/upload/v1786116892/WhatsApp_Image_2026-08-07_at_8.43.06_PM_bevxlj.jpg',
+    tag: 'Stage Operations',
+  },
+  {
+    id: 5,
+    name: 'Adhil sulaiman. Ponnani',
+    role: 'PROGRAM COORDINATOR JEELANI FEST 26',
+    isChairman: false,
+    photo: 'https://res.cloudinary.com/mqorn88v/image/upload/v1786116892/adil_b1v0ce.jpg',
+    tag: 'Finance & Assets',
+  },
+  {
+    id: 6,
+    name: 'Ali  Zainul Abideen. Wayanad',
+    role: 'PROGRAM COORDINATOR JEELANI FEST 26',
+    isChairman: false,
+    photo: 'https://res.cloudinary.com/mqorn88v/image/upload/v1786117487/ChatGPT_Image_Aug_7_2026_09_14_38_PM_myrfvn.png',
+    tag: 'Media & Branding',
+  },
+  {
+    id: 7,
+    name: 'Ahammed Fairooz. Valyora',
+    role: 'PROGRAMME COORDINATOR JEELANI FEST 26',
+    isChairman: false,
+    photo: 'https://res.cloudinary.com/mqorn88v/image/upload/v1786118139/ChatGPT_Image_Aug_7_2026_09_25_27_PM_vchunb.png',
+    tag: 'Student Affairs',
+  },
 ];
 
 /* ── Animated Counter Component ── */
@@ -121,6 +176,25 @@ const Home = () => {
   const fetchStats = () => apiClient.get('/public/dashboard/stats').then(res => setStats(res.data));
   const [chartGroups, setChartGroups] = useState<any[]>([]);
   const [chartMilestones, setChartMilestones] = useState<any[]>([]);
+  const [galleryShowcaseItems, setGalleryShowcaseItems] = useState<any[]>([]);
+
+  const fetchGalleryShowcase = () => {
+    apiClient.get('/public/gallery?limit=10')
+      .then(res => {
+        const raw = res.data?.data || res.data || [];
+        if (Array.isArray(raw) && raw.length > 0) {
+          const mapped = raw.map((item: any, idx: number) => ({
+            id: item._id || item.id || idx,
+            image: item.imageUrl || item.url || item.image,
+            title: item.title || item.competition?.name || 'Fest Highlight',
+            caption: item.description || (item.competition ? item.competition.name : 'Jeelani Fest 2026 Visual Moment'),
+            category: item.category || (item.competition ? 'Competition' : 'Event Gallery'),
+          }));
+          setGalleryShowcaseItems(mapped);
+        }
+      })
+      .catch(err => console.error('Error fetching showcase gallery:', err));
+  };
 
   const fetchChartData = (filter: string) => {
     apiClient.get('/public/dashboard/group-analytics', { params: { filter } })
@@ -139,6 +213,7 @@ const Home = () => {
     fetchOngoing();
     fetchStats();
     fetchChartData(chartFilter);
+    fetchGalleryShowcase();
 
     const socketUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
     const socket = io(socketUrl);
@@ -149,6 +224,7 @@ const Home = () => {
       fetchOngoing();
       fetchStats();
       fetchChartData(chartFilter);
+      fetchGalleryShowcase();
     };
 
     socket.on('points:updated', handleGlobalUpdate);
@@ -297,6 +373,46 @@ const Home = () => {
         </motion.div>
       </section>
 
+      {/* ── QUICK DIRECT NAVIGATION SHORTCUTS BAR (Compact Mobile & Desktop) ── */}
+      <div className="relative z-30 max-w-4xl mx-auto px-4 -mt-8 mb-2">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-white/95 backdrop-blur-xl border border-slate-200/90 shadow-md rounded-xl p-2 sm:p-3"
+        >
+          <div className="flex items-center mb-1.5 px-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1">
+              <Compass size={12} className="text-sky-600 animate-spin-slow" />
+              Explore
+            </span>
+          </div>
+
+          <div className="grid grid-cols-5 gap-1.5 sm:gap-2.5">
+            {[
+              { name: 'Groups', path: '/groups', icon: <Trophy size={15} />, bg: 'bg-gradient-to-tr from-amber-500 to-yellow-400' },
+              { name: 'Results', path: '/results', icon: <Award size={15} />, bg: 'bg-gradient-to-tr from-emerald-500 to-teal-400' },
+              { name: 'Participants', path: '/participants', icon: <Users size={15} />, bg: 'bg-gradient-to-tr from-sky-500 to-blue-600' },
+              { name: 'Gallery', path: '/festgallery', icon: <ImageIcon size={15} />, bg: 'bg-gradient-to-tr from-purple-500 to-indigo-500' },
+              { name: 'Pro Arena', path: '/analytics', icon: <BarChart3 size={15} />, bg: 'bg-gradient-to-tr from-rose-500 to-pink-500' },
+            ].map((item) => (
+              <button
+                key={item.name}
+                onClick={() => navigate(item.path)}
+                className="flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-lg bg-slate-50 hover:bg-sky-50/80 border border-slate-100/90 hover:border-sky-200 group transition-all transform hover:-translate-y-0.5 active:scale-95 text-center cursor-pointer"
+              >
+                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg ${item.bg} flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform mb-1`}>
+                  {item.icon}
+                </div>
+                <span className="text-[9px] sm:text-[11px] font-extrabold text-slate-800 group-hover:text-sky-600 line-clamp-1">
+                  {item.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
       {/* ═══════════════════════════════════════
           MAIN BENTO GRID (SPOTS 1, 2, 3)
          ═══════════════════════════════════════ */}
@@ -436,11 +552,14 @@ const Home = () => {
           <SectionHeading
             title="Event Showcase Gallery"
             titleAr="معرض اللحظات المميزة"
-            subtitle="Curated 3D circular highlight reel of live festival events."
+            subtitle="Curated 3D circular highlight reel of live festival events. Click any photo to open full gallery."
             centered={true}
           />
 
-          <CircularGallery />
+          <CircularGallery
+            items={galleryShowcaseItems}
+            onItemClick={() => navigate('/festgallery')}
+          />
         </section>
 
         {/* SPOT 3: NAVIGATE TO FEST GALLERY BANNER (FULL WIDTH / 12 COLS) */}
@@ -736,39 +855,119 @@ const Home = () => {
 
         <BrassDivider />
 
-        {/* ── Coordinators + Stats ── */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start relative z-10">
-          <div>
-            <SectionHeading title="About Jeelani Fest" titleAr="عن مهرجان الجيلاني" centered={true} />
-            <GlassCard className="p-8 bg-white border border-slate-200 shadow-sm" hover={false}>
-              <p className="leading-relaxed mb-6 text-slate-600 text-base">
-                Jeelani Fest 2026 is the ultimate celebration of art, culture, and competitive spirit. Bringing together the brightest minds and most talented individuals, it serves as a prestigious platform for students to unleash their passion across hundreds of diverse programs.
-              </p>
-              <p className="leading-relaxed text-slate-600 text-base">
-                Rooted in tradition but looking towards the future, our festival is a testament to the power of creativity and the unifying force of artistic expression.
-              </p>
-            </GlassCard>
+        {/* ── ABOUT JEELANI FEST ── */}
+        <section className="relative z-10 max-w-4xl mx-auto">
+          <SectionHeading title="About Jeelani Fest" titleAr="عن مهرجان الجيلاني" centered={true} />
+          <GlassCard className="p-8 md:p-12 bg-white border border-slate-200/90 shadow-sm text-center rounded-3xl" hover={false}>
+            <p className="leading-relaxed mb-6 text-slate-700 text-base md:text-lg font-medium">
+              Jeelani Fest 2026 is the ultimate celebration of art, culture, and competitive spirit. Bringing together the brightest minds and most talented individuals, it serves as a prestigious platform for students to unleash their passion across hundreds of diverse programs.
+            </p>
+            <p className="leading-relaxed text-slate-500 text-sm md:text-base">
+              Rooted in tradition but looking towards the future, our festival is a testament to the power of creativity and the unifying force of artistic expression.
+            </p>
+          </GlassCard>
+        </section>
+
+        <BrassDivider />
+
+        {/* ── MEET THE COORDINATORS (PREMIUM LEADERSHIP SHOWCASE - 7 MEMBERS) ── */}
+        <section className="relative z-10 max-w-6xl mx-auto">
+          <SectionHeading 
+            title="Meet the Coordinators" 
+            titleAr="فريق الإدارة والتنسيق" 
+            subtitle="The executive organizing committee leading Jeelani Fest 2026 to victory."
+            centered={true} 
+          />
+
+          {/* 1. PROGRAM CHAIRMAN FEATURED SPOTLIGHT CARD */}
+          <div className="mb-8">
+            {coordinatorMembers
+              .filter(m => m.isChairman)
+              .map(chairman => (
+                <motion.div
+                  key={chairman.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6 }}
+                  whileHover={{ y: -3 }}
+                >
+                  <div className="relative rounded-3xl overflow-hidden p-6 sm:p-8 bg-gradient-to-r from-slate-900 via-slate-950 to-slate-900 border border-amber-400/50 shadow-2xl text-white">
+                    <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+                    
+                    <div className="flex flex-col md:flex-row items-center gap-6 sm:gap-8 relative z-10 text-center md:text-left">
+                      {/* Avatar with golden halo ring & small golden crown */}
+                      <div className="relative shrink-0">
+                        <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 border-amber-400/90 shadow-xl shadow-amber-500/25 ring-4 ring-amber-400/30">
+                          <img
+                            src={chairman.photo}
+                            alt={chairman.name}
+                            className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
+                          />
+                        </div>
+                        <div className="absolute top-0 right-0 w-8 h-8 rounded-full bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-500 border-2 border-slate-950 shadow-lg flex items-center justify-center text-slate-950" title="Chairman">
+                          <Crown size={16} className="fill-slate-950" />
+                        </div>
+                      </div>
+
+                      {/* Details */}
+                      <div className="flex-1">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 text-[11px] font-extrabold uppercase tracking-widest mb-2.5">
+                          <Star size={12} className="fill-amber-300" />
+                          Executive Leadership
+                        </div>
+                        <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-wide break-words" style={{ fontFamily: 'var(--font-display)' }}>
+                          {chairman.name}
+                        </h3>
+                        <p className="text-amber-400 font-extrabold text-sm sm:text-base uppercase tracking-widest mt-1">
+                          {chairman.role}
+                        </p>
+                        <p className="text-slate-300 text-xs sm:text-sm mt-2 max-w-xl font-medium leading-relaxed">
+                          {chairman.bio}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
           </div>
 
-          <div>
-            <SectionHeading title="Meet the Coordinators" titleAr="فريق التنسيق" centered={true} />
-            <div className="space-y-4">
-              {dummyCoordinators.map((coord, i) => (
-                <motion.div key={i} whileHover={{ x: 6 }} transition={{ type: 'spring', stiffness: 300, damping: 25 }}>
-                  <GlassCard className="flex items-center gap-5 p-4 bg-white border border-slate-200 shadow-sm">
-                    <img
-                      src={coord.photo}
-                      alt={coord.name}
-                      className="w-14 h-14 rounded-full object-cover border-2 border-slate-100 shadow-sm"
-                    />
-                    <div>
-                      <h4 className="font-extrabold text-base text-slate-900" style={{ fontFamily: 'var(--font-display)' }}>{coord.name}</h4>
-                      <p className="text-xs uppercase tracking-[0.15em] font-bold text-sky-600 mt-0.5">{coord.role}</p>
+          {/* 2. GRID OF 6 KEY COORDINATOR MEMBERS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            {coordinatorMembers
+              .filter(m => !m.isChairman)
+              .map((coord, idx) => (
+                <motion.div
+                  key={coord.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: idx * 0.08 }}
+                  whileHover={{ y: -4 }}
+                >
+                  <GlassCard className="flex items-center gap-4 p-4 sm:p-5 bg-white border border-slate-200/90 shadow-sm hover:shadow-md hover:border-sky-300 transition-all rounded-2xl group h-full">
+                    <div className="relative shrink-0">
+                      <img
+                        src={coord.photo}
+                        alt={coord.name}
+                        className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-slate-100 shadow-md group-hover:scale-105 transition-transform"
+                      />
+                      <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-tr from-amber-500 via-amber-400 to-yellow-500 border border-white shadow-md flex items-center justify-center text-slate-950">
+                        <Crown size={11} className="fill-slate-950" />
+                      </div>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-extrabold text-sm sm:text-base text-slate-900 leading-snug group-hover:text-sky-600 transition-colors" style={{ fontFamily: 'var(--font-display)' }}>
+                        {coord.name}
+                      </h4>
+                      <p className="text-xs uppercase tracking-wider font-extrabold text-sky-600 mt-1 leading-normal">
+                        {coord.role}
+                      </p>
                     </div>
                   </GlassCard>
                 </motion.div>
               ))}
-            </div>
           </div>
         </section>
 

@@ -155,13 +155,6 @@ const PublicHeader: React.FC = () => {
                 </Link>
               </motion.div>
             ))}
-            <div className="w-24 h-[1px] bg-slate-200 my-4" />
-            <Link
-              to="/admin/login"
-              className="px-8 py-3 rounded-full text-sm font-extrabold uppercase tracking-wider bg-slate-900 text-white shadow-md"
-            >
-              Admin Login
-            </Link>
           </motion.div>
         )}
       </AnimatePresence>

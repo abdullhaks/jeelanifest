@@ -11,6 +11,7 @@ interface CircularItem {
 
 interface CircularGalleryProps {
   items?: CircularItem[];
+  onItemClick?: (item: CircularItem) => void;
 }
 
 const defaultItems: CircularItem[] = [
@@ -51,7 +52,7 @@ const defaultItems: CircularItem[] = [
   },
 ];
 
-export const CircularGallery: React.FC<CircularGalleryProps> = ({ items = defaultItems }) => {
+export const CircularGallery: React.FC<CircularGalleryProps> = ({ items = defaultItems, onItemClick }) => {
   const galleryItems = items.length > 0 ? items : defaultItems;
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -128,8 +129,13 @@ export const CircularGallery: React.FC<CircularGalleryProps> = ({ items = defaul
                   rotateY: isCenter ? 0 : offset === 1 ? -15 : offset === count - 1 ? 15 : 0,
                 }}
                 transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                onClick={() => setActiveIndex(index)}
-                className="absolute w-[280px] sm:w-[340px] md:w-[380px] h-[340px] md:h-[390px] rounded-3xl overflow-hidden cursor-pointer shadow-xl border border-white/80 bg-white/90 backdrop-blur-md flex flex-col justify-between"
+                onClick={() => {
+                  setActiveIndex(index);
+                  if (onItemClick) {
+                    onItemClick(item);
+                  }
+                }}
+                className="absolute w-[280px] sm:w-[340px] md:w-[380px] h-[340px] md:h-[390px] rounded-3xl overflow-hidden cursor-pointer shadow-xl border border-white/80 bg-white/90 backdrop-blur-md flex flex-col justify-between group"
                 style={{ zIndex }}
               >
                 {/* Photo Container */}

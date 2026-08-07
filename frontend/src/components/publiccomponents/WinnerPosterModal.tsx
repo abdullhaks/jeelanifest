@@ -445,23 +445,71 @@ export const WinnerPosterModal: React.FC<WinnerPosterModalProps> = ({
     }
   }, [isOpen, winner, renderPoster]);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     setDownloading(true);
     try {
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
       const studentName = winner?.participant?.name || winner?.name || 'Winner';
       const rank = winner?.rank || 'Winner';
       const filename = `JeelaniFest2026_${rank}_${studentName.replace(/\s+/g, '_')}.jpg`;
 
-      const link = document.createElement('a');
-      link.download = filename;
-      link.href = dataUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Detect iOS devices explicitly (iPhone, iPad, iPod, iPadOS)
+      const isIOS =
+        typeof navigator !== 'undefined' &&
+        (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+
+      if (isIOS) {
+        // iOS Strategy: Use Web Share API for iOS (iPhone/iPad) or open Blob URL tab fallback
+        const blob = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.92);
+        });
+
+        if (!blob) {
+          throw new Error('Failed to generate image blob from canvas');
+        }
+
+        const file = new File([blob], filename, { type: 'image/jpeg' });
+
+        if (
+          navigator.share &&
+          navigator.canShare &&
+          navigator.canShare({ files: [file] })
+        ) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: filename,
+              text: `Jeelani Fest 2026 Winner Poster - ${studentName}`,
+            });
+            return;
+          } catch (shareErr: any) {
+            if (shareErr.name === 'AbortError') {
+              return;
+            }
+            console.warn('iOS Web Share API failed, attempting fallback tab:', shareErr);
+          }
+        }
+
+        // iOS Fallback: Open Blob URL in a new window/tab for long-press -> "Save to Photos"
+        const blobUrl = URL.createObjectURL(blob);
+        const win = window.open(blobUrl, '_blank');
+        if (!win) {
+          window.location.href = blobUrl;
+        }
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+      } else {
+        // Non-iOS devices (Windows PC, Mac Desktop, Linux, Android): Direct File Download
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     } catch (err) {
       console.error('Failed to download poster:', err);
     } finally {
