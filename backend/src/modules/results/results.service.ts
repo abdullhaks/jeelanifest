@@ -52,6 +52,10 @@ export class ResultsService implements OnModuleInit {
     ).exec();
   }
 
+  async findAll(): Promise<Result[]> {
+    return this.resultModel.find().populate('competition').exec();
+  }
+
   async getResultByCompetition(competitionId: string): Promise<Result | null> {
     return this.resultModel.findOne({ competition: competitionId })
       .populate({ path: 'winners.participant', select: 'name class group profileImage logoUrl', strictPopulate: false })
@@ -140,8 +144,85 @@ export class ResultsService implements OnModuleInit {
 
     // Populate for socket payload
     const populatedResult = await this.resultModel.findById(id)
-      .populate('competition', 'name type')
-      .populate({ path: 'winners.participant', select: 'name profileImage logoUrl class', strictPopulate: false })
+      .populate('competition', 'name type category stage status')
+      .populate({ path: 'winners.participant', select: 'name profileImage logoUrl class groupName', strictPopulate: false })
+      .exec();
+
+    this.socketGateway.emitEvent('result:published', populatedResult);
+    this.socketGateway.emitEvent('points:updated', { timestamp: new Date() });
+    return populatedResult!;
+  }
+
+  async updatePublishedResult(id: string, dto: SaveResultDraftDto): Promise<Result> {
+    const result = await this.resultModel.findById(id).exec();
+    if (!result) throw new NotFoundException('Result not found');
+
+    // 1. If currently published, revert points and ranks from previous winners
+    if (result.status === 'published') {
+      for (const winner of result.winners) {
+        if (winner.participantType === 'Group') {
+          await this.groupModel.findByIdAndUpdate(winner.participant, {
+            $inc: { totalPoints: -winner.pointsAwarded }
+          });
+        } else if (winner.participantType === 'Student') {
+          const student = await this.studentModel.findById(winner.participant).exec();
+          if (student) {
+            student.points = Math.max(0, student.points - winner.pointsAwarded);
+            const programIndex = student.programs.findIndex(p => p.competition.toString() === result.competition.toString());
+            if (programIndex >= 0) {
+              student.programs[programIndex].rankAwarded = null;
+            }
+            await student.save();
+
+            if (student.group) {
+              await this.groupModel.findByIdAndUpdate(student.group, {
+                $inc: { totalPoints: -winner.pointsAwarded }
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Update winners list
+    result.winners = dto.winners as any;
+    result.status = 'published';
+    await result.save();
+
+    // 3. Apply points and ranks for updated winners
+    for (const winner of result.winners) {
+      if (winner.participantType === 'Group') {
+        await this.groupModel.findByIdAndUpdate(winner.participant, {
+          $inc: { totalPoints: winner.pointsAwarded }
+        });
+      } else if (winner.participantType === 'Student') {
+        const student = await this.studentModel.findById(winner.participant).exec();
+        if (student) {
+          student.points += winner.pointsAwarded;
+          
+          const programIndex = student.programs.findIndex(p => p.competition.toString() === result.competition.toString());
+          if (programIndex >= 0) {
+            student.programs[programIndex].rankAwarded = winner.rank;
+          } else {
+            student.programs.push({
+              competition: result.competition,
+              rankAwarded: winner.rank
+            });
+          }
+          await student.save();
+
+          if (student.group) {
+            await this.groupModel.findByIdAndUpdate(student.group, {
+              $inc: { totalPoints: winner.pointsAwarded }
+            });
+          }
+        }
+      }
+    }
+
+    const populatedResult = await this.resultModel.findById(id)
+      .populate('competition', 'name type category stage status')
+      .populate({ path: 'winners.participant', select: 'name profileImage logoUrl class groupName', strictPopulate: false })
       .exec();
 
     this.socketGateway.emitEvent('result:published', populatedResult);

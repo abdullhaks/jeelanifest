@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useScroll, useTransform, useInView } from 'fra
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import apiClient from '../../services/apiClient';
-import { ComposedChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
 import CountUp from 'react-countup';
 import {
   LatticeBackground, GlassCard, BentoGrid, BentoCell,
@@ -14,6 +14,34 @@ import { GroupDetailModal } from '../../components/publiccomponents/GroupDetailM
 import { CircularGallery } from '../../components/publiccomponents/CircularGallery';
 import { MagicCard, MagicBento } from '../../components/publiccomponents/MagicBento';
 
+const groupColors = ['#0284C7', '#10B981', '#D97706', '#7C3AED', '#EC4899', '#06B6D4', '#8B5CF6'];
+
+const CustomMilestoneTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const compName = payload[0]?.payload?.competitionName || '';
+    return (
+      <div className="bg-white p-3.5 border border-slate-200 rounded-xl shadow-xl min-w-[200px] z-50">
+        <div className="text-xs font-extrabold text-slate-900 border-b border-slate-100 pb-1.5 mb-2 flex flex-col">
+          <span className="text-sky-600 font-mono text-xs">{label} Milestone</span>
+          <span className="text-slate-500 font-medium text-[11px] truncate max-w-[220px]">{compName}</span>
+        </div>
+        <div className="space-y-1.5">
+          {payload.map((entry: any, index: number) => (
+            <div key={`item-${index}`} className="flex items-center justify-between text-xs font-bold gap-4">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: entry.color }} />
+                <span className="text-slate-700 font-extrabold">{entry.name}:</span>
+              </div>
+              <span className="font-mono text-slate-900 font-black">{entry.value} pts</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 // Safe CountUp component resolution for Vite ESM
 const CountUpComp: any = (CountUp as any)?.default || CountUp;
 
@@ -21,7 +49,7 @@ const CountUpComp: any = (CountUp as any)?.default || CountUp;
 const slides = [
   {
     id: 1,
-    image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=2070&auto=format&fit=crop',
+    image: 'hero1.JPEG',
     en: 'Art Without Limits',
     ar: 'فن بلا حدود',
   },
@@ -33,6 +61,12 @@ const slides = [
   },
   {
     id: 3,
+    image: 'hero2.JPEG',
+    en: 'Unleash Your Passion',
+    ar: 'أطلق العنان لشغفك',
+  },
+  {
+    id: 4,
     image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1974&auto=format&fit=crop',
     en: 'Unleash Your Passion',
     ar: 'أطلق العنان لشغفك',
@@ -77,21 +111,24 @@ const Home = () => {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [groupModalOpen, setGroupModalOpen] = useState(false);
 
+  // Selected Student Modal
+  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+  const [studentModalOpen, setStudentModalOpen] = useState(false);
+
   const fetchGroups = () => apiClient.get('/public/dashboard/groups').then(res => setGroups(res.data));
   const fetchStudents = () => apiClient.get('/public/dashboard/students').then(res => setStudents(res.data));
   const fetchOngoing = () => apiClient.get('/public/dashboard/ongoing-programs').then(res => setOngoingPrograms(res.data));
   const fetchStats = () => apiClient.get('/public/dashboard/stats').then(res => setStats(res.data));
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [chartGroups, setChartGroups] = useState<any[]>([]);
+  const [chartMilestones, setChartMilestones] = useState<any[]>([]);
 
   const fetchChartData = (filter: string) => {
     apiClient.get('/public/dashboard/group-analytics', { params: { filter } })
       .then(res => {
-        const formatted = res.data.map((g: any, idx: number) => ({
-          name: g.name,
-          points: g.points || 0,
-          trend: Math.round((g.points || 0) * (0.85 + (idx % 3) * 0.1)),
-        }));
-        setChartData(formatted);
+        if (res.data) {
+          setChartGroups(res.data.groups || []);
+          setChartMilestones(res.data.milestones || []);
+        }
       })
       .catch(err => console.error(err));
   };
@@ -119,8 +156,11 @@ const Home = () => {
     socket.on('competitions:updated', handleGlobalUpdate);
     socket.on('final:announced', handleGlobalUpdate);
 
+    window.addEventListener('refresh-graphs', handleGlobalUpdate);
+
     return () => {
       socket.disconnect();
+      window.removeEventListener('refresh-graphs', handleGlobalUpdate);
     };
   }, [chartFilter]);
 
@@ -136,11 +176,39 @@ const Home = () => {
   const heroY = useTransform(scrollYProgress, [0, 0.3], [0, 60]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.25], [1, 0]);
 
-  const filteredStudents = students.filter(s => activeTab === 'overall' || s.category.toLowerCase() === activeTab.toLowerCase()).slice(0, 10);
+  const filteredStudents = (() => {
+    const categories = ['subJunior', 'junior', 'senior'];
+    
+    if (activeTab === 'overall') {
+      const topPerCategory: any[] = [];
+      categories.forEach(cat => {
+        const topInCat = students
+          .filter(s => {
+            const sCat = (s.category || '').toLowerCase().replace(/\s+/g, '');
+            const cName = cat.toLowerCase();
+            return sCat === cName;
+          })
+          .sort((a, b) => (b.points || 0) - (a.points || 0))[0];
+        if (topInCat) topPerCategory.push(topInCat);
+      });
+      return topPerCategory.sort((a, b) => (b.points || 0) - (a.points || 0));
+    } else {
+      const targetCat = activeTab.toLowerCase().replace(/\s+/g, '');
+      const matched = students
+        .filter(s => (s.category || '').toLowerCase().replace(/\s+/g, '') === targetCat)
+        .sort((a, b) => (b.points || 0) - (a.points || 0));
+      return matched.slice(0, 1);
+    }
+  })();
 
   const handleOpenGroup = (groupId: string) => {
     setSelectedGroupId(groupId);
     setGroupModalOpen(true);
+  };
+
+  const handleOpenStudentDetail = (student: any) => {
+    setSelectedStudent(student);
+    setStudentModalOpen(true);
   };
 
   return (
@@ -320,46 +388,62 @@ const Home = () => {
                 ))}
               </div>
 
-              {/* Biaxial Line / Composed Chart */}
-              <div style={{ width: '100%', height: 300 }}>
+              {/* Milestone Multi-Line Chart */}
+              <div style={{ width: '100%', height: 320 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                  <LineChart data={chartMilestones} margin={{ top: 15, right: 20, left: -10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                     <XAxis 
-                      dataKey="name" 
-                      tick={{ fill: '#0F172A', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-display)' }} 
+                      dataKey="milestone" 
+                      tick={{ fill: '#475569', fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-display)' }} 
                       axisLine={{ stroke: '#CBD5E1' }}
                     />
                     <YAxis 
-                      yAxisId="left" 
-                      orientation="left" 
-                      tick={{ fill: '#0284C7', fontSize: 12, fontWeight: 700 }}
-                      axisLine={{ stroke: '#0284C7' }}
+                      tick={{ fill: '#475569', fontSize: 11, fontWeight: 700 }}
+                      axisLine={{ stroke: '#CBD5E1' }}
                     />
-                    <YAxis 
-                      yAxisId="right" 
-                      orientation="right" 
-                      tick={{ fill: '#D97706', fontSize: 12, fontWeight: 700 }}
-                      axisLine={{ stroke: '#D97706' }}
+                    <Tooltip content={<CustomMilestoneTooltip />} />
+                    <Legend 
+                      wrapperStyle={{ paddingTop: '12px', fontSize: '12px', fontWeight: 'bold' }}
+                      iconType="circle"
                     />
-                    <Tooltip
-                      contentStyle={{
-                        background: '#FFFFFF',
-                        border: '1px solid #E2E8F0',
-                        borderRadius: 12,
-                        color: '#0F172A',
-                        boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)'
-                      }}
-                    />
-                    <Bar yAxisId="left" dataKey="points" fill="#0284C7" radius={[6, 6, 0, 0]} barSize={28} />
-                    <Line yAxisId="right" type="monotone" dataKey="trend" stroke="#D97706" strokeWidth={3} dot={{ r: 5, fill: '#D97706' }} />
-                  </ComposedChart>
+                    {chartGroups.map((group: any, idx: number) => (
+                      <Line
+                        key={group._id}
+                        type="monotone"
+                        dataKey={group._id}
+                        name={group.name}
+                        stroke={groupColors[idx % groupColors.length]}
+                        strokeWidth={3}
+                        dot={{ r: 4, stroke: groupColors[idx % groupColors.length], strokeWidth: 2, fill: '#FFFFFF' }}
+                        activeDot={{ r: 8, stroke: groupColors[idx % groupColors.length], strokeWidth: 2, fill: groupColors[idx % groupColors.length] }}
+                      />
+                    ))}
+                  </LineChart>
                 </ResponsiveContainer>
               </div>
             </GlassCard>
           </div>
 
-          {/* SPOT 3: NAVIGATE TO FEST GALLERY BANNER (FULL WIDTH / 12 COLS) */}
+          
+
+        </div>
+
+        <BrassDivider />
+
+        {/* ── REACT BITS CIRCULAR GALLERY SECTION ── */}
+        <section className="relative z-10">
+          <SectionHeading
+            title="Event Showcase Gallery"
+            titleAr="معرض اللحظات المميزة"
+            subtitle="Curated 3D circular highlight reel of live festival events."
+            centered={true}
+          />
+
+          <CircularGallery />
+        </section>
+
+        {/* SPOT 3: NAVIGATE TO FEST GALLERY BANNER (FULL WIDTH / 12 COLS) */}
           <div className="lg:col-span-12">
             <motion.div
               whileHover={{ scale: 1.01 }}
@@ -390,22 +474,6 @@ const Home = () => {
               </div>
             </motion.div>
           </div>
-
-        </div>
-
-        <BrassDivider />
-
-        {/* ── REACT BITS CIRCULAR GALLERY SECTION ── */}
-        <section className="relative z-10">
-          <SectionHeading
-            title="Event Showcase Gallery"
-            titleAr="معرض اللحظات المميزة"
-            subtitle="Curated 3D circular highlight reel of live festival events."
-            centered={true}
-          />
-
-          <CircularGallery />
-        </section>
 
         <BrassDivider />
 
@@ -493,24 +561,45 @@ const Home = () => {
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <GlassCard className="p-5 flex items-center justify-between bg-white border border-slate-200 shadow-sm">
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="w-11 h-11 rounded-full flex items-center justify-center font-mono text-lg font-bold shadow-sm"
-                        style={{
-                          background: index === 0 ? '#FEF3C7' : index === 1 ? '#F1F5F9' : index === 2 ? '#FFEDD5' : '#F8FAFC',
-                          color: index === 0 ? '#D97706' : index === 1 ? '#475569' : index === 2 ? '#C2410C' : '#94A3B8',
-                          border: `1px solid ${index === 0 ? '#FDE68A' : index === 1 ? '#E2E8F0' : index === 2 ? '#FDBA74' : '#E2E8F0'}`,
-                        }}
-                      >
-                        #{index + 1}
+                  <GlassCard 
+                    className="p-5 flex items-center justify-between bg-white border border-slate-200 shadow-sm hover:border-sky-300 transition-all cursor-pointer hover:scale-[1.02]"
+                    onClick={() => handleOpenStudentDetail(student)}
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="relative shrink-0">
+                        {student.profileImage ? (
+                          <img
+                            src={student.profileImage}
+                            alt={student.name}
+                            className="w-12 h-12 rounded-full object-cover border-2 border-slate-100 shadow-sm"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white font-extrabold text-lg shadow-sm">
+                            {student.name ? student.name.charAt(0).toUpperCase() : 'S'}
+                          </div>
+                        )}
+                        <span
+                          className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center font-mono text-[9px] font-black shadow-sm"
+                          style={{
+                            background: index === 0 ? '#FEF3C7' : index === 1 ? '#F1F5F9' : index === 2 ? '#FFEDD5' : '#F8FAFC',
+                            color: index === 0 ? '#D97706' : index === 1 ? '#475569' : index === 2 ? '#C2410C' : '#94A3B8',
+                            border: `1px solid ${index === 0 ? '#FDE68A' : index === 1 ? '#E2E8F0' : index === 2 ? '#FDBA74' : '#E2E8F0'}`,
+                          }}
+                        >
+                          #{index + 1}
+                        </span>
                       </div>
                       <div>
                         <h3 className="font-extrabold text-base text-slate-900 leading-tight" style={{ fontFamily: 'var(--font-display)' }}>
                           {student.name}
                         </h3>
-                        <div className="text-xs text-slate-500 mt-1 font-medium">
-                          {student.chestNo && `Chest: ${student.chestNo} • `}{student.group?.name}
+                        <div className="text-xs text-slate-500 mt-1 font-medium flex items-center gap-1.5">
+                          {student.category && (
+                            <span className="px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 text-[10px] font-extrabold uppercase border border-sky-100">
+                              {student.category}
+                            </span>
+                          )}
+                          <span>{student.group?.name || student.groupName || 'House Member'}</span>
                         </div>
                       </div>
                     </div>
@@ -527,6 +616,29 @@ const Home = () => {
                 No students with points in this category yet.
               </div>
             )}
+          </div>
+        </section>
+
+        <BrassDivider />
+
+        {/* ── Follow the Battle of the Champion Section ── */}
+        <section className="relative z-10 my-4">
+          <div className="bg-gradient-to-r from-slate-900 via-sky-950 to-emerald-950 rounded-3xl p-8 md:p-12 text-white shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8 border border-sky-500/20">
+            <div className="relative z-10 max-w-2xl">
+              <LiveBadge label="PRO SCOREBOARD" />
+              <h2 className="text-3xl md:text-5xl font-black mt-3 mb-3 text-white" style={{ fontFamily: 'var(--font-display)' }}>
+                Follow the Battle of the Champions
+              </h2>
+              <p className="text-slate-300 text-sm md:text-base leading-relaxed">
+                Experience real-time live scoring, biaxial performance trends, and category breakdown analytics in our Pro Scoreboard portal.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/pro-analytics')}
+              className="relative z-10 px-8 py-4 rounded-full font-extrabold text-sm bg-sky-500 hover:bg-sky-400 text-white shadow-lg transition-all flex items-center gap-2 shrink-0 cursor-pointer"
+            >
+              View Live Results &rarr;
+            </button>
           </div>
         </section>
 
@@ -571,6 +683,55 @@ const Home = () => {
               );
             })}
           </BentoGrid>
+        </section>
+
+        <BrassDivider />
+
+        {/* ── Goussiya Student Centre Section ── */}
+        <section className="relative z-10">
+          <SectionHeading
+            title="Goussiya Student Centre"
+            titleAr="مركز الغوثية الطلابي"
+            subtitle="Introducing our vibrant Student Council — the driving force behind Jeelani Fest 2026."
+            centered={true}
+          />
+          <GlassCard className="p-8 md:p-12 bg-white border border-slate-200 shadow-md">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-24 h-24 rounded-2xl bg-gradient-to-tr from-sky-600 via-teal-600 to-emerald-600 p-0.5 shadow-xl mb-4">
+                  <div className="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center text-4xl font-extrabold text-amber-400">
+                    <img src="gsc.jpeg" alt="" className='w-full h-full object-cover rounded-xl' />
+                  </div>
+                </div>
+                <h3 className="font-extrabold text-xl text-slate-900 mb-1" style={{ fontFamily: 'var(--font-display)' }}>
+                  Goussiya Student Centre
+                </h3>
+                <span className="text-xs font-bold uppercase tracking-widest text-sky-600 bg-sky-50 px-3 py-1 rounded-full border border-sky-100">
+                  Apex Student Council
+                </span>
+              </div>
+
+              <div className="md:col-span-2 space-y-4 text-slate-600 text-sm leading-relaxed">
+                <p>
+                  The <strong className="text-slate-900">Goussiya Student Centre (GSC)</strong> is the official student council governing body dedicated to empowering youth, fostering leadership, and organizing grand cultural events like <em>Jeelani Fest 2026</em>.
+                </p>
+                <p>
+                  Through visionary leadership and collaborative execution, GSC nurtures artistic talents, intellectual debate, and cultural heritage across all participating institutions.
+                </p>
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <div className="bg-slate-50 border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold text-slate-700">
+                    ✨ Student Governance
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold text-slate-700">
+                    🎨 Cultural Co-ordination
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold text-slate-700">
+                    🏆 Fair Play & Ethics
+                  </div>
+                </div>
+              </div>
+            </div>
+          </GlassCard>
         </section>
 
         <BrassDivider />
@@ -632,6 +793,79 @@ const Home = () => {
         open={groupModalOpen}
         onClose={() => setGroupModalOpen(false)}
       />
+
+      {/* Student Detail Modal (Artistic Talent Race) */}
+      <AnimatePresence>
+        {studentModalOpen && selectedStudent && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md"
+            onClick={() => setStudentModalOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 20, opacity: 0 }}
+              className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-slate-200 relative text-slate-900 overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                className="absolute top-5 right-5 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center transition-colors"
+                onClick={() => setStudentModalOpen(false)}
+              >
+                ✕
+              </button>
+
+              <div className="flex items-center gap-5 mb-6 pb-6 border-b border-slate-100">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-sky-500 to-emerald-600 text-white font-extrabold text-2xl flex items-center justify-center shadow-md overflow-hidden shrink-0">
+                  {selectedStudent.profileImage ? (
+                    <img src={selectedStudent.profileImage} alt={selectedStudent.name} className="w-full h-full object-cover" />
+                  ) : (
+                    selectedStudent.name.charAt(0)
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-slate-900" style={{ fontFamily: 'var(--font-display)' }}>
+                    {selectedStudent.name}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    {selectedStudent.chestNo && (
+                      <span className="text-xs font-bold font-mono bg-sky-50 text-sky-700 px-2.5 py-0.5 rounded border border-sky-100">
+                        CHEST #{selectedStudent.chestNo}
+                      </span>
+                    )}
+                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                      {selectedStudent.category}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center">
+                  <div className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-1">Group Team</div>
+                  <div className="font-bold text-slate-800 text-base">{selectedStudent.group?.name || selectedStudent.groupName || 'Individual'}</div>
+                </div>
+                <div className="p-4 rounded-2xl bg-sky-50 border border-sky-100 text-center">
+                  <div className="text-xs font-extrabold uppercase tracking-wider text-sky-600 mb-1">Total Score</div>
+                  <div className="font-mono text-2xl font-black text-sky-600">{selectedStudent.points} PTS</div>
+                </div>
+              </div>
+
+              <div className="text-center pt-2">
+                <button
+                  onClick={() => setStudentModalOpen(false)}
+                  className="w-full py-3 rounded-full font-bold bg-slate-900 hover:bg-slate-800 text-white transition-colors"
+                >
+                  Close Student Profile
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

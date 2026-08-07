@@ -4,6 +4,7 @@ import { GroupsController } from './groups.controller';
 import { GroupsService } from './groups.service';
 import { Group, GroupSchema } from './group.schema';
 import { Student, StudentSchema } from '../students/student.schema';
+import { Result, ResultSchema } from '../results/result.schema';
 import { AuthModule } from '../auth/auth.module';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
@@ -11,7 +12,8 @@ import { CloudinaryModule } from '../cloudinary/cloudinary.module';
   imports: [
     MongooseModule.forFeature([
       { name: Group.name, schema: GroupSchema },
-      { name: Student.name, schema: StudentSchema }
+      { name: Student.name, schema: StudentSchema },
+      { name: Result.name, schema: ResultSchema },
     ]),
     AuthModule,
     CloudinaryModule,
@@ -21,3 +23,4 @@ import { CloudinaryModule } from '../cloudinary/cloudinary.module';
   exports: [GroupsService],
 })
 export class GroupsModule {}
+

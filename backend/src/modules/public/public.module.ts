@@ -6,6 +6,7 @@ import { Group, GroupSchema } from '../groups/group.schema';
 import { Student, StudentSchema } from '../students/student.schema';
 import { Competition, CompetitionSchema } from '../competitions/competition.schema';
 import { Result, ResultSchema } from '../results/result.schema';
+import { FinalResult, FinalResultSchema } from '../results/final-result.schema';
 import { GalleryImage, GalleryImageSchema } from '../gallery/gallery.schema';
 
 @Module({
@@ -15,6 +16,7 @@ import { GalleryImage, GalleryImageSchema } from '../gallery/gallery.schema';
       { name: Student.name, schema: StudentSchema },
       { name: Competition.name, schema: CompetitionSchema },
       { name: Result.name, schema: ResultSchema },
+      { name: FinalResult.name, schema: FinalResultSchema },
       { name: GalleryImage.name, schema: GalleryImageSchema }
     ])
   ],

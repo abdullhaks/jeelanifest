@@ -15,6 +15,11 @@ export class ResultsController {
     return this.resultsService.saveDraft(dto);
   }
 
+  @Get()
+  findAll() {
+    return this.resultsService.findAll();
+  }
+
   @Get('competition/:competitionId')
   getResultByCompetition(@Param('competitionId') compId: string) {
     return this.resultsService.getResultByCompetition(compId);
@@ -28,6 +33,14 @@ export class ResultsController {
   @Post(':id/publish')
   publishResult(@Param('id') id: string) {
     return this.resultsService.publishResult(id);
+  }
+
+  @Put(':id')
+  updatePublishedResult(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(saveResultDraftSchema)) dto: SaveResultDraftDto
+  ) {
+    return this.resultsService.updatePublishedResult(id, dto);
   }
 
   @Post('final-announcement')

@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { io } from 'socket.io-client';
 import {
-  ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Cell
+  LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
 import { Spin, Avatar } from 'antd';
 import { TrophyFilled, FireFilled, FullscreenOutlined, FullscreenExitOutlined, ReloadOutlined, HomeOutlined } from '@ant-design/icons';
@@ -13,10 +13,37 @@ import { LatticeBackground, LiveBadge } from '../../components/publiccomponents/
 
 const barColors = ['#0284C7', '#0F4C3A', '#D97706', '#7C3AED', '#EC4899', '#10B981'];
 
+const CustomMilestoneTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const compName = payload[0]?.payload?.competitionName || '';
+    return (
+      <div className="bg-white p-2.5 border border-slate-200 rounded-lg shadow-lg min-w-[160px] text-[11px] z-50">
+        <div className="font-extrabold text-slate-900 border-b border-slate-100 pb-1 mb-1 flex flex-col">
+          <span className="text-sky-600 font-mono text-[11px]">{label} Milestone</span>
+          <span className="text-slate-500 font-medium text-[10px] truncate max-w-[180px]">{compName}</span>
+        </div>
+        <div className="space-y-1">
+          {payload.map((entry: any, index: number) => (
+            <div key={`item-${index}`} className="flex items-center justify-between font-bold gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: entry.color }} />
+                <span className="text-slate-700 font-extrabold">{entry.name}:</span>
+              </div>
+              <span className="font-mono text-slate-900 font-black">{entry.value} pts</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 const ProAnalytics: React.FC = () => {
   const navigate = useNavigate();
   const [data, setData] = useState<any>(null);
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [chartGroups, setChartGroups] = useState<any[]>([]);
+  const [chartMilestones, setChartMilestones] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'overall' | 'group' | 'subJunior' | 'junior' | 'senior'>('overall');
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -39,21 +66,23 @@ const ProAnalytics: React.FC = () => {
   const fetchFilteredGraph = async (currentFilter: string) => {
     try {
       const res = await apiClient.get('/public/dashboard/group-analytics', { params: { filter: currentFilter } });
-      const formatted = res.data.map((g: any, idx: number) => ({
-        name: g.name,
-        points: g.points || 0,
-        trend: Math.round((g.points || 0) * (0.85 + (idx % 3) * 0.1)),
-      }));
-      setChartData(formatted);
+      if (res.data) {
+        setChartGroups(res.data.groups || []);
+        setChartMilestones(res.data.milestones || []);
+      }
       setLastSync(new Date().toLocaleTimeString());
     } catch (err) {
       console.error(err);
     }
   };
 
+  const [isSpinning, setIsSpinning] = useState(false);
+
   const handleGlobalRefresh = () => {
+    setIsSpinning(true);
     fetchProData();
     fetchFilteredGraph(filter);
+    setTimeout(() => setIsSpinning(false), 800);
   };
 
   // Initial load & socket live updation
@@ -69,10 +98,13 @@ const ProAnalytics: React.FC = () => {
     socket.on('competitions:updated', handleGlobalRefresh);
     socket.on('final:announced', handleGlobalRefresh);
 
+    window.addEventListener('refresh-graphs', handleGlobalRefresh);
+
     const interval = setInterval(handleGlobalRefresh, 10000);
 
     return () => {
       socket.disconnect();
+      window.removeEventListener('refresh-graphs', handleGlobalRefresh);
       clearInterval(interval);
     };
   }, []);
@@ -159,13 +191,14 @@ const ProAnalytics: React.FC = () => {
             <HomeOutlined className="text-sky-600 font-bold" /> Home
           </button>
 
-          <button
+          <motion.button
+            whileTap={{ scale: 0.9 }}
             onClick={handleGlobalRefresh}
-            className="p-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-sky-600 transition-all shadow-sm text-xs"
+            className="p-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-sky-600 transition-all shadow-sm text-xs flex items-center justify-center"
             title="Refresh Data"
           >
-            <ReloadOutlined />
-          </button>
+            <ReloadOutlined className={isSpinning ? "animate-spin text-sky-600 text-sm" : "transition-transform text-sky-600 text-sm"} />
+          </motion.button>
 
           <button
             onClick={toggleFullscreen}
@@ -299,27 +332,25 @@ const ProAnalytics: React.FC = () => {
 
             <div style={{ width: '100%', height: 210 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={chartData} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
+                <LineChart data={chartMilestones} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                  <XAxis dataKey="name" tick={{ fill: '#0F172A', fontSize: 10, fontWeight: 700 }} />
-                  <YAxis yAxisId="left" orientation="left" tick={{ fill: '#0284C7', fontSize: 10, fontWeight: 700 }} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fill: '#D97706', fontSize: 10, fontWeight: 700 }} />
-                  <Tooltip
-                    contentStyle={{
-                      background: '#FFFFFF',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: 10,
-                      color: '#0F172A',
-                      fontSize: 11,
-                    }}
-                  />
-                  <Bar yAxisId="left" dataKey="points" radius={[6, 6, 0, 0]} barSize={26}>
-                    {chartData.map((_: any, idx: number) => (
-                      <Cell key={idx} fill={barColors[idx % barColors.length]} />
-                    ))}
-                  </Bar>
-                  <Line yAxisId="right" type="monotone" dataKey="trend" stroke="#D97706" strokeWidth={2.5} dot={{ r: 3, fill: '#D97706' }} />
-                </ComposedChart>
+                  <XAxis dataKey="milestone" tick={{ fill: '#0F172A', fontSize: 10, fontWeight: 700 }} />
+                  <YAxis tick={{ fill: '#0284C7', fontSize: 10, fontWeight: 700 }} />
+                  <Tooltip content={<CustomMilestoneTooltip />} />
+                  <Legend wrapperStyle={{ paddingTop: '4px', fontSize: '10px', fontWeight: 'bold' }} iconType="circle" />
+                  {chartGroups.map((group: any, idx: number) => (
+                    <Line
+                      key={group._id}
+                      type="monotone"
+                      dataKey={group._id}
+                      name={group.name}
+                      stroke={barColors[idx % barColors.length]}
+                      strokeWidth={2.5}
+                      dot={{ r: 3, stroke: barColors[idx % barColors.length], strokeWidth: 1.5, fill: '#FFFFFF' }}
+                      activeDot={{ r: 6, stroke: barColors[idx % barColors.length], strokeWidth: 2, fill: barColors[idx % barColors.length] }}
+                    />
+                  ))}
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </div>

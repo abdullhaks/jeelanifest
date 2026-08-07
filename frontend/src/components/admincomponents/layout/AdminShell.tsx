@@ -8,13 +8,15 @@ import RequireAdmin from '../../shared/RequireAdmin';
 const { Content } = Layout;
 
 const AdminShell = () => {
-  const [collapsed, setCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [collapsed, setCollapsed] = useState(window.innerWidth < 992);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 992);
 
   // Handle window resize for responsive layout
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 992); // lg breakpoint
+      const mobile = window.innerWidth < 992;
+      setIsMobile(mobile);
+      if (mobile) setCollapsed(true);
     };
     
     // Initial check

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Pagination, Spin, Select } from 'antd';
+import { useState, useEffect, useMemo } from 'react';
+import { Pagination, Spin, Select, Input } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../services/apiClient';
@@ -11,19 +12,26 @@ const Results = () => {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const filters: any = {};
-      if (categoryFilter) filters.category = categoryFilter;
-
       const res = await apiClient.get('/public/results', {
         params: {
           page,
-          limit: 12,
-          filter: JSON.stringify(filters),
+          limit: 50,
           sortBy: '_id',
           sortOrder: 'desc'
         }
@@ -40,15 +48,50 @@ const Results = () => {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, categoryFilter]);
+  }, [page]);
+
+  // Compute filtered results based on category & debounced search query
+  const filteredData = useMemo(() => {
+    let list = data;
+
+    if (categoryFilter) {
+      list = list.filter((item: any) => {
+        const comp = item.competition;
+        if (!comp) return false;
+        if (categoryFilter === 'group') {
+          return comp.type === 'group' || (comp.category && comp.category.toLowerCase() === 'group');
+        }
+        const compCat = (comp.category || '').toLowerCase().replace(/[\s-_]+/g, '');
+        const filterCat = categoryFilter.toLowerCase().replace(/[\s-_]+/g, '');
+        return compCat === filterCat;
+      });
+    }
+
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase().trim();
+      list = list.filter((item: any) => {
+        const compName = item.competition?.name?.toLowerCase() || '';
+        const compCategory = item.competition?.category?.toLowerCase() || '';
+        const compType = item.competition?.type?.toLowerCase() || '';
+        const winnerMatch = item.winners?.some((w: any) =>
+          w.participant?.name?.toLowerCase().includes(q) ||
+          w.participant?.groupName?.toLowerCase().includes(q) ||
+          w.chestCode?.toLowerCase().includes(q)
+        );
+        return compName.includes(q) || compCategory.includes(q) || compType.includes(q) || winnerMatch;
+      });
+    }
+
+    return list;
+  }, [data, debouncedSearch, categoryFilter]);
 
   return (
     <div className="min-h-screen pt-32 pb-20 relative bg-[#F8F9FA] text-slate-900">
       <LatticeBackground opacity={0.03} parallax={false} />
 
       <div className="max-w-7xl w-full mx-auto px-6 relative z-10">
-        {/* Header + Filter */}
-        <div className="flex flex-col items-center justify-center text-center mb-12">
+        {/* Header + Search & Filter Controls */}
+        <div className="flex flex-col items-center justify-center text-center mb-10">
           <SectionHeading
             title="Published Results"
             titleAr="النتائج المنشورة"
@@ -56,17 +99,30 @@ const Results = () => {
             centered={true}
           />
 
-          <div className="w-full max-w-xs mt-2">
+          {/* Search bar + Category Filter */}
+          <div className="w-full max-w-2xl mt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Input
+              placeholder="Search competition or winner name..."
+              prefix={<SearchOutlined className="text-slate-400" />}
+              allowClear
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="h-11 rounded-full shadow-sm border-slate-300 flex-1"
+              style={{ minWidth: 260 }}
+            />
+
             <Select
               allowClear
               placeholder="Filter by Category"
-              className="w-full h-12 rounded-full"
+              className="w-full sm:w-56 h-11"
               size="large"
               onChange={val => { setCategoryFilter(val); setPage(1); }}
               options={[
                 { value: 'subJunior', label: 'Sub Junior' },
                 { value: 'junior', label: 'Junior' },
-                { value: 'senior', label: 'Senior' }
+                { value: 'senior', label: 'Senior' },
+                { value: 'group', label: 'Group Competitions' },
+                { value: 'general', label: 'General' }
               ]}
             />
           </div>
@@ -78,7 +134,7 @@ const Results = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {data.map((result, index) => {
+              {filteredData.map((result, index) => {
                 const firstWinner = result.winners?.find((w: any) => w.rank === '1st');
                 const secondWinner = result.winners?.find((w: any) => w.rank === '2nd');
                 const thirdWinner = result.winners?.find((w: any) => w.rank === '3rd');
@@ -89,7 +145,7 @@ const Results = () => {
                     initial={{ opacity: 0, y: 20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ delay: index * 0.05 }}
+                    transition={{ delay: index * 0.04 }}
                   >
                     <GlassCard
                       className="p-6 flex flex-col items-center justify-between text-center h-full bg-white border border-slate-200 shadow-sm hover:shadow-md cursor-pointer group"
@@ -163,18 +219,18 @@ const Results = () => {
               })}
             </div>
 
-            {data.length === 0 && (
+            {filteredData.length === 0 && (
               <GlassCard className="text-center py-20" hover={false}>
-                <p style={{ color: 'rgba(243, 236, 221, 0.3)' }}>No published results found.</p>
+                <p className="text-slate-400 font-medium">No published results found for your search/filter.</p>
               </GlassCard>
             )}
 
-            {total > 12 && (
+            {total > 24 && (
               <div className="flex justify-center mt-12">
                 <Pagination
                   current={page}
                   total={total}
-                  pageSize={12}
+                  pageSize={24}
                   onChange={setPage}
                   showSizeChanger={false}
                 />

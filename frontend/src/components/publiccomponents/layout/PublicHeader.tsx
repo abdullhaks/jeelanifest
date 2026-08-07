@@ -46,17 +46,17 @@ const PublicHeader: React.FC = () => {
           {/* Logo */}
           <Link to="/" className="group flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-600 to-sky-500 flex items-center justify-center text-white font-extrabold text-lg shadow-md group-hover:scale-105 transition-transform">
-              ✨
+              <img src="logo1.png" alt="" className='w-full h-full object-cover rounded-full' />
             </div>
             <div className="flex flex-col">
               <span
                 className="font-extrabold text-lg md:text-xl tracking-tight text-slate-900 leading-tight group-hover:text-sky-600 transition-colors"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
-                Jeelani Fest
+                Jeelani Fest <span className='text-amber-600'>2026</span>
               </span>
               <span className="text-[9px] tracking-[0.2em] uppercase font-bold text-emerald-700">
-                Sheikh Jeelani Academy
+                Sheikh Jeelani Islamic Academy
               </span>
             </div>
           </Link>
@@ -89,12 +89,17 @@ const PublicHeader: React.FC = () => {
 
           {/* Login Action CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Link
+            {/* <Link
               to="/admin/login"
               className="px-5 py-2.5 rounded-full text-xs font-extrabold uppercase tracking-wider transition-all bg-slate-900 text-white hover:bg-sky-600 shadow-sm hover:shadow-md hover:scale-105"
             >
               Login
-            </Link>
+            </Link> */}
+             <Link to="/" className="group flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-600 to-sky-500 flex items-center justify-center text-white font-extrabold text-lg shadow-md group-hover:scale-105 transition-transform">
+              <img src="gsc.jpeg" alt=""  className='rounded-full w-9 h-9'/>
+            </div>
+          </Link>
           </div>
 
           {/* Mobile Hamburger */}

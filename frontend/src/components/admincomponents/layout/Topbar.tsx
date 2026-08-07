@@ -1,11 +1,17 @@
 import { useState } from 'react';
-import { Layout, Button, Dropdown, Input, Modal, Form, message } from 'antd';
-import { MenuFoldOutlined, MenuUnfoldOutlined, SearchOutlined, LogoutOutlined, KeyOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Button, Dropdown, Input, Modal, Form, message } from 'antd';
+import { 
+  MenuFoldOutlined, 
+  MenuUnfoldOutlined, 
+  LogoutOutlined, 
+  KeyOutlined, 
+  ExclamationCircleOutlined,
+  DownOutlined
+} from '@ant-design/icons';
 import { useAuthStore } from '../../../store/authStore';
 import apiClient from '../../../services/apiClient';
 import { useNavigate } from 'react-router-dom';
 
-const { Header } = Layout;
 const { confirm } = Modal;
 
 interface TopbarProps {
@@ -14,7 +20,7 @@ interface TopbarProps {
   isMobile: boolean;
 }
 
-const Topbar = ({ collapsed, onCollapse, isMobile }: TopbarProps) => {
+const Topbar = ({ collapsed, onCollapse, isMobile: _isMobile }: TopbarProps) => {
   const { admin, clearAuth } = useAuthStore();
   const navigate = useNavigate();
   const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
@@ -24,7 +30,7 @@ const Topbar = ({ collapsed, onCollapse, isMobile }: TopbarProps) => {
   const handleLogout = () => {
     confirm({
       title: 'Are you sure you want to log out?',
-      icon: <ExclamationCircleOutlined />,
+      icon: <ExclamationCircleOutlined className="text-rose-500" />,
       content: 'You will need to sign in again to access the admin portal.',
       okText: 'Yes, Log Out',
       okType: 'danger',
@@ -62,8 +68,8 @@ const Topbar = ({ collapsed, onCollapse, isMobile }: TopbarProps) => {
   const userMenuItems = [
     {
       key: 'change-password',
-      icon: <KeyOutlined />,
-      label: 'Change Password',
+      icon: <KeyOutlined className="text-sky-600 text-sm" />,
+      label: <span className="font-semibold text-slate-700 text-xs">Change Password</span>,
       onClick: () => setIsPasswordModalVisible(true),
     },
     {
@@ -71,45 +77,82 @@ const Topbar = ({ collapsed, onCollapse, isMobile }: TopbarProps) => {
     },
     {
       key: 'logout',
-      icon: <LogoutOutlined />,
-      label: 'Log Out',
-      danger: true,
+      icon: <LogoutOutlined className="text-rose-600 text-sm" />,
+      label: <span className="font-semibold text-rose-600 text-xs">Log Out</span>,
       onClick: handleLogout,
     },
   ];
 
+  const username = admin?.username || 'jeelanifestadmin';
+
   return (
     <>
-      <Header className="bg-white px-4 h-16 flex items-center justify-between border-b border-gray-100 shadow-sm sticky top-0 z-40">
-        <div className="flex items-center flex-1">
-          <Button
-            type="text"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+      <header className="bg-white border-b border-slate-200/80 px-4 md:px-6 h-16 flex items-center justify-between shadow-2xs sticky top-0 z-40">
+        {/* Left Side: Collapse Toggle & Portal Badge */}
+        <div className="flex items-center space-x-3">
+          <button
             onClick={() => onCollapse(!collapsed)}
-            className="text-lg w-10 h-10 mr-4"
-          />
-          {!isMobile && (
-            <Input
-              placeholder="Search everywhere..."
-              prefix={<SearchOutlined className="text-gray-400" />}
-              className="w-64 md:w-96 rounded-full border-gray-200 bg-gray-50 focus:bg-white hover:bg-white transition-colors"
-            />
-          )}
+            className="w-9 h-9 rounded-lg border border-slate-200/80 bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-600 hover:text-slate-900 transition-all cursor-pointer shadow-2xs"
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label="Toggle navigation menu"
+          >
+            {collapsed ? <MenuUnfoldOutlined className="text-base" /> : <MenuFoldOutlined className="text-base" />}
+          </button>
+          
+          <div className="flex items-center space-x-2">
+            <span className="px-3 py-1 rounded-full text-[11px] font-black tracking-widest bg-sky-50 text-sky-700 border border-sky-200/80 uppercase">
+              Admin Portal
+            </span>
+          </div>
         </div>
 
+        {/* Right Side: Admin User Dropdown Pill */}
         <div className="flex items-center space-x-4">
-          <Dropdown menu={{ items: userMenuItems }} trigger={['click']} placement="bottomRight">
-            <div className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 py-1 px-3 rounded-full transition-colors">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#14b8a6] to-[#0f766e] flex items-center justify-center text-white font-semibold">
-                {admin?.username?.charAt(0).toUpperCase() || 'A'}
+          <Dropdown
+            menu={{ items: userMenuItems }}
+            trigger={['click']}
+            placement="bottomRight"
+            dropdownRender={(menu) => (
+              <div className="bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden min-w-[220px]">
+                <div className="p-4 bg-gradient-to-r from-slate-900 via-slate-800 to-sky-950 text-white">
+                  <div className="flex items-center space-x-3">
+                    <div className="relative">
+                      <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-slate-950 font-black text-base shadow-md border-2 border-white/20">
+                        <img src="/logo1.png" alt="" className='w-full h-full object-cover rounded-full' />
+                      </div>
+                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-slate-900" />
+                    </div>
+                    <div className="overflow-hidden">
+                      <div className="font-extrabold text-sm text-white truncate font-display">
+                        {username}
+                      </div>
+                      <div className="text-[10px] font-mono font-bold text-sky-300 uppercase tracking-wider">
+                        Super Administrator
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-1">
+                  {menu}
+                </div>
               </div>
-              {!isMobile && (
-                <span className="font-medium text-gray-700">{admin?.username}</span>
-              )}
+            )}
+          >
+            <div className="flex items-center my-5 space-x-2.5 cursor-pointer bg-slate-50 hover:bg-slate-100/90 py-1.5 px-3 rounded-full border border-slate-200/80 transition-all shadow-2xs group">
+              <div className="relative">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-sky-600 to-teal-500 flex items-center justify-center text-white font-black text-xs shadow-xs group-hover:scale-105 transition-transform">
+                  <img src="/logo1.png" alt="" className='w-full h-full object-cover rounded-full' />
+                </div>
+                <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 border border-white" />
+              </div>
+              <span className="font-bold text-xs text-slate-800 font-display group-hover:text-sky-600 transition-colors">
+                {username}
+              </span>
+              <DownOutlined className="text-[10px] text-slate-400 group-hover:text-slate-600 group-hover:translate-y-0.5 transition-all" />
             </div>
           </Dropdown>
         </div>
-      </Header>
+      </header>
 
       <Modal
         title="Change Password"

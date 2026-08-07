@@ -5,6 +5,7 @@ import { Group, GroupDocument } from '../groups/group.schema';
 import { Student, StudentDocument } from '../students/student.schema';
 import { Competition, CompetitionDocument } from '../competitions/competition.schema';
 import { Result, ResultDocument } from '../results/result.schema';
+import { FinalResult, FinalResultDocument } from '../results/final-result.schema';
 import { PaginationQuery } from '../common/pagination.schema';
 import { paginate, PaginatedResult } from '../common/paginate.helper';
 import { NotFoundException } from '@nestjs/common';
@@ -18,6 +19,7 @@ export class PublicService {
     @InjectModel(Student.name) private studentModel: Model<StudentDocument>,
     @InjectModel(Competition.name) private competitionModel: Model<CompetitionDocument>,
     @InjectModel(Result.name) private resultModel: Model<ResultDocument>,
+    @InjectModel(FinalResult.name) private finalResultModel: Model<FinalResultDocument>,
     @InjectModel(GalleryImage.name) private galleryModel: Model<GalleryImageDocument>,
   ) {}
 
@@ -33,90 +35,110 @@ export class PublicService {
   }
 
   async getGroupAnalytics(filter: string = 'overall') {
-    const allGroups = await this.groupModel.find({ isDeleted: false }).select('name logoUrl totalPoints').exec();
+    const allGroups = await this.groupModel.find({ isDeleted: false }).sort({ name: 1 }).select('name logoUrl totalPoints').exec();
     
-    if (filter === 'group') {
-      // 1. Group Items filter:
-      // Find all group competitions (type === 'group')
-      const groupCompetitions = await this.competitionModel.find({ type: 'group' }).select('_id').exec();
-      const groupCompIds = groupCompetitions.map(c => c._id.toString());
+    // Fetch all published results sorted chronologically by updatedAt
+    const publishedResults = await this.resultModel.find({ status: 'published' })
+      .sort({ updatedAt: 1 })
+      .populate('competition')
+      .populate({
+        path: 'winners.participant',
+        populate: { path: 'group', strictPopulate: false },
+        strictPopulate: false
+      })
+      .exec();
 
-      // Fetch published results with populated competition and participant details
-      const results = await this.resultModel.find({ status: 'published' })
-        .populate('competition')
-        .populate({
-          path: 'winners.participant',
-          populate: { path: 'group', strictPopulate: false },
-          strictPopulate: false
-        })
-        .exec();
+    // Filter published results according to the filter param
+    const filteredResults = publishedResults.filter(r => {
+      const comp = r.competition as any;
+      if (!comp) return false;
+      if (filter === 'group') {
+        return comp.type === 'group';
+      }
+      if (['subJunior', 'junior', 'senior'].includes(filter)) {
+        const catNorm = (comp.category || '').toLowerCase().replace(/\s+/g, '');
+        const filterNorm = filter.toLowerCase().replace(/\s+/g, '');
+        return catNorm === filterNorm;
+      }
+      return true; // 'overall'
+    });
 
-      const pointsMap: Record<string, number> = {};
+    // Build milestones timeline
+    const groupCumulativePoints: Record<string, number> = {};
+    allGroups.forEach(g => {
+      groupCumulativePoints[g._id.toString()] = 0;
+    });
 
-      results.forEach(r => {
-        const comp = r.competition as any;
-        // Check if competition is a group event
-        if (comp && (comp.type === 'group' || groupCompIds.includes(comp._id.toString()))) {
-          r.winners?.forEach(w => {
-            let gId: string | null = null;
-            if (w.participantType === 'Group' && w.participant) {
-              const part = w.participant as any;
-              gId = part._id ? part._id.toString() : part.toString();
-            } else if (w.participantType === 'Student' && w.participant) {
-              const student = w.participant as any;
-              if (student.group) {
-                gId = student.group._id ? student.group._id.toString() : student.group.toString();
-              }
-            }
+    const milestones: any[] = [];
 
-            if (gId) {
-              pointsMap[gId] = (pointsMap[gId] || 0) + (w.pointsAwarded || 0);
-            }
-          });
+    // Milestone 0: Start
+    const startPoint: any = {
+      milestone: 'Start',
+      label: 'Start',
+      competitionName: 'Fest Launch',
+    };
+    allGroups.forEach(g => {
+      startPoint[g._id.toString()] = 0;
+    });
+    milestones.push(startPoint);
+
+    // Iterative Milestones per published result
+    filteredResults.forEach((r, idx) => {
+      const comp = r.competition as any;
+      const compName = comp?.name || `Result ${idx + 1}`;
+      const milestoneKey = `M${idx + 1}`;
+
+      // Award points from this result
+      r.winners?.forEach(w => {
+        let gId: string | null = null;
+        if (w.participantType === 'Group' && w.participant) {
+          const part = w.participant as any;
+          gId = part._id ? part._id.toString() : part.toString();
+        } else if (w.participantType === 'Student' && w.participant) {
+          const student = w.participant as any;
+          if (student.group) {
+            gId = student.group._id ? student.group._id.toString() : student.group.toString();
+          }
+        }
+
+        if (gId && groupCumulativePoints[gId] !== undefined) {
+          groupCumulativePoints[gId] += (w.pointsAwarded || 0);
         }
       });
 
-      return allGroups.map(g => ({
-        _id: g._id,
-        name: g.name,
-        logoUrl: g.logoUrl,
-        points: pointsMap[g._id.toString()] || 0,
-        totalPoints: g.totalPoints,
-      })).sort((a, b) => b.points - a.points);
-    }
+      const milestonePoint: any = {
+        milestone: milestoneKey,
+        label: milestoneKey,
+        competitionName: compName,
+      };
 
-    if (['subJunior', 'junior', 'senior'].includes(filter)) {
-      // 2. Category filter (subJunior / junior / senior):
-      // Aggregate student points by category and group by house/group ID
-      const studentPoints = await this.studentModel.aggregate([
-        { $match: { category: filter } },
-        { $group: { _id: '$group', totalCatPoints: { $sum: '$points' } } }
-      ]);
-
-      const pointsMap: Record<string, number> = {};
-      studentPoints.forEach(sp => {
-        if (sp._id) {
-          pointsMap[sp._id.toString()] = sp.totalCatPoints || 0;
-        }
+      allGroups.forEach(g => {
+        const gId = g._id.toString();
+        milestonePoint[gId] = groupCumulativePoints[gId] || 0;
       });
 
-      return allGroups.map(g => ({
-        _id: g._id,
-        name: g.name,
-        logoUrl: g.logoUrl,
-        points: pointsMap[g._id.toString()] || 0,
-        totalPoints: g.totalPoints,
-      })).sort((a, b) => b.points - a.points);
-    }
+      milestones.push(milestonePoint);
+    });
 
-    // 3. Default: Overall points
-    return allGroups.map(g => ({
+    // Formulate final response containing group info list & milestone graph timeline
+    const groupSummaries = allGroups.map(g => ({
       _id: g._id,
       name: g.name,
       logoUrl: g.logoUrl,
-      points: g.totalPoints,
+      points: groupCumulativePoints[g._id.toString()] || 0,
       totalPoints: g.totalPoints,
     })).sort((a, b) => b.points - a.points);
+
+    return {
+      groups: groupSummaries.map(g => ({
+        _id: g._id.toString(),
+        name: g.name,
+        logoUrl: g.logoUrl,
+        points: g.points,
+        totalPoints: g.totalPoints
+      })),
+      milestones,
+    };
   }
 
   async getProAnalyticsData() {
@@ -232,10 +254,22 @@ export class PublicService {
     const result = await this.resultModel
       .findOne({ _id: id, status: 'published' })
       .populate('competition')
-      .populate({ path: 'winners.participant', strictPopulate: false })
+      .populate({
+        path: 'winners.participant',
+        populate: { path: 'group', select: 'name logoUrl', strictPopulate: false },
+        strictPopulate: false,
+      })
       .exec();
     if (!result) throw new NotFoundException('Result not found or not published');
     return result;
+  }
+
+  async getFinalResult() {
+    return this.finalResultModel.findOne()
+      .populate('firstPlaceGroup', 'name logoUrl totalPoints')
+      .populate('secondPlaceGroup', 'name logoUrl totalPoints')
+      .populate('thirdPlaceGroup', 'name logoUrl totalPoints')
+      .exec();
   }
 
   async getGalleryImages(query: PaginationQuery): Promise<PaginatedResult<GalleryImage>> {
@@ -262,6 +296,114 @@ export class PublicService {
     const group = await this.groupModel.findById(id).exec();
     if (!group) throw new NotFoundException('Group not found');
     return group;
+  }
+
+  async getGroupBreakdown(id: string) {
+    const group = await this.groupModel
+      .findOne({ _id: id, isDeleted: false })
+      .populate('leaders')
+      .lean()
+      .exec();
+
+    if (!group) {
+      throw new NotFoundException(`Group with ID ${id} not found`);
+    }
+
+    const students = await this.studentModel
+      .find(
+        { group: { $in: [id, id.toString()] } },
+        'name chestNo class profileImage points category'
+      )
+      .exec();
+
+    const studentMap = new Map(students.map((s: any) => [s._id.toString(), s]));
+
+    const publishedResults = await this.resultModel
+      .find({ status: 'published' })
+      .populate('competition')
+      .populate({ path: 'winners.participant', strictPopulate: false })
+      .exec();
+
+    const pointBreakdown: any[] = [];
+    const groupIdStr = id.toString();
+
+    for (const res of publishedResults) {
+      const comp = res.competition as any;
+      if (!comp) continue;
+      const winners = res.winners || [];
+      for (const w of winners) {
+        if (w.participantType === 'Student') {
+          const part = w.participant as any;
+          const partId = part?._id ? part._id.toString() : (part ? part.toString() : null);
+          if (partId && studentMap.has(partId)) {
+            const st = studentMap.get(partId)!;
+            pointBreakdown.push({
+              id: `${res._id}_${w.rank}_${partId}`,
+              competitionId: comp._id,
+              competitionName: comp.name,
+              category: comp.category,
+              competitionType: comp.type || 'student',
+              participantType: 'Student',
+              participantId: partId,
+              participantName: st.name,
+              participantPhoto: st.profileImage || null,
+              chestCode: w.chestCode || (st as any).chestNo || '',
+              rank: w.rank,
+              pointsAwarded: w.pointsAwarded || 0,
+              updatedAt: (res as any).updatedAt || (res as any).createdAt,
+            });
+          }
+        } else if (w.participantType === 'Group') {
+          const part = w.participant as any;
+          const partId = part?._id ? part._id.toString() : (part ? part.toString() : null);
+          if (partId === groupIdStr) {
+            pointBreakdown.push({
+              id: `${res._id}_${w.rank}_${groupIdStr}`,
+              competitionId: comp._id,
+              competitionName: comp.name,
+              category: comp.category,
+              competitionType: comp.type || 'group',
+              participantType: 'Group',
+              participantId: groupIdStr,
+              participantName: w.chestCode ? `Group (${w.chestCode})` : 'Group Entry',
+              participantPhoto: group.logoUrl || null,
+              chestCode: w.chestCode || '',
+              rank: w.rank,
+              pointsAwarded: w.pointsAwarded || 0,
+              updatedAt: (res as any).updatedAt || (res as any).createdAt,
+            });
+          }
+        }
+      }
+    }
+
+    pointBreakdown.sort((a, b) => b.pointsAwarded - a.pointsAwarded);
+
+    const membersList = students.map((s: any) => ({
+      _id: s._id,
+      name: s.name,
+      chestNo: s.chestNo || 'N/A',
+      class: s.class,
+      category: s.category,
+      profileImage: s.profileImage,
+      points: s.points || 0,
+    }));
+
+    const topScorers = [...membersList]
+      .filter(m => m.points > 0)
+      .sort((a, b) => b.points - a.points);
+
+    return {
+      group: {
+        ...group,
+        membersCount: membersList.length,
+        studentCount: membersList.length,
+      },
+      topScorers,
+      members: membersList.sort((a, b) => a.name.localeCompare(b.name)),
+      pointBreakdown,
+      totalPoints: group.totalPoints || 0,
+    };
   }
 
   async getStudents(query: PaginationQuery): Promise<PaginatedResult<Student>> {

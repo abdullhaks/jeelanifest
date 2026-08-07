@@ -43,6 +43,11 @@ export class PublicController {
     return this.publicService.getResults(query);
   }
 
+  @Get('results/final')
+  getFinalResult() {
+    return this.publicService.getFinalResult();
+  }
+
   @Get('results/:id')
   getResultById(@Param('id') id: string) {
     return this.publicService.getResultById(id);
@@ -51,6 +56,11 @@ export class PublicController {
   @Get('groups')
   getGroupsList(@Query() query: PaginationQuery) {
     return this.publicService.getGroups(query);
+  }
+
+  @Get('groups/:id/breakdown')
+  getGroupBreakdown(@Param('id') id: string) {
+    return this.publicService.getGroupBreakdown(id);
   }
 
   @Get('groups/:id')

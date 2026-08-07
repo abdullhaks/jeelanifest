@@ -58,6 +58,11 @@ export class GroupsController {
     return this.groupsService.findAll(query);
   }
 
+  @Get(':id/breakdown')
+  getGroupBreakdown(@Param('id') id: string) {
+    return this.groupsService.getGroupBreakdown(id);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.groupsService.findOne(id);

@@ -29,13 +29,40 @@ const Results = () => {
   const [finalModalVisible, setFinalModalVisible] = useState(false);
   const [groups, setGroups] = useState<any[]>([]);
   const [finalChamps, setFinalChamps] = useState<{first?: string, second?: string, third?: string}>({});
+  
+  // Results status map & status filter
+  const [resultsMap, setResultsMap] = useState<Record<string, string>>({});
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  const fetchCompetitionsAndResults = async () => {
+    try {
+      const compRes = await apiClient.get('/competitions?limit=1000');
+      const comps = compRes.data.data;
+      setCompetitions(comps);
+
+      // Fetch all results to build status map
+      const map: Record<string, string> = {};
+      try {
+        const resultsRes = await apiClient.get('/results?limit=1000');
+        const results = resultsRes.data.data || resultsRes.data;
+        if (Array.isArray(results)) {
+          results.forEach((r: any) => {
+            const compId = typeof r.competition === 'object' ? r.competition?._id : r.competition;
+            if (compId) map[compId] = r.status || 'draft';
+          });
+        }
+      } catch (e) {
+        // Fallback
+      }
+      setResultsMap(map);
+      setFilteredCompetitions(comps);
+    } catch (err) {
+      message.error('Failed to load competitions');
+    }
+  };
 
   useEffect(() => {
-    // Load competitions
-    apiClient.get('/competitions?limit=1000').then(res => {
-      setCompetitions(res.data.data);
-      setFilteredCompetitions(res.data.data);
-    }).catch(() => message.error('Failed to load competitions'));
+    fetchCompetitionsAndResults();
 
     // Load groups for final announcement
     apiClient.get('/groups?limit=100').then(res => {
@@ -44,14 +71,21 @@ const Results = () => {
   }, []);
 
   useEffect(() => {
+    let list = competitions;
+    
     if (search) {
-      setFilteredCompetitions(
-        competitions.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
-      );
-    } else {
-      setFilteredCompetitions(competitions);
+      list = list.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
     }
-  }, [search, competitions]);
+
+    if (statusFilter !== 'all') {
+      list = list.filter(c => {
+        const resStatus = resultsMap[c._id] || 'pending';
+        return resStatus === statusFilter;
+      });
+    }
+
+    setFilteredCompetitions(list);
+  }, [search, statusFilter, competitions, resultsMap]);
 
   const loadCompetitionData = async (record: any) => {
     setSelectedCompId(record._id);
@@ -116,20 +150,28 @@ const Results = () => {
 
   const saveDraft = async () => {
     if (!selectedCompId) return;
+    if (!winners || winners.length === 0) {
+      message.error('Please assign at least one position winner before saving draft');
+      return;
+    }
     try {
       await apiClient.post('/results', {
         competition: selectedCompId,
         winners
       });
-      message.success('Draft saved');
-      const compRecord = competitions.find(c => c._id === selectedCompId);
-      if (compRecord) loadCompetitionData(compRecord);
+      message.success('Draft saved successfully!');
+      await fetchCompetitionsAndResults();
+      setSelectedCompId(null);
     } catch (error) {
       message.error('Failed to save draft');
     }
   };
 
   const publishResult = () => {
+    if (!winners || winners.length === 0) {
+      message.error('Please assign at least one position winner before publishing');
+      return;
+    }
     if (!resultId) {
       message.error('Please save as draft first before publishing');
       return;
@@ -144,10 +186,37 @@ const Results = () => {
         try {
           await apiClient.post(`/results/${resultId}/publish`);
           message.success('Results Published!');
-          const compRecord = competitions.find(c => c._id === selectedCompId);
-          if (compRecord) loadCompetitionData(compRecord);
+          await fetchCompetitionsAndResults();
+          setSelectedCompId(null);
         } catch (error) {
           message.error('Failed to publish results');
+        }
+      }
+    });
+  };
+
+  const updatePublishedResult = () => {
+    if (!resultId || !selectedCompId) return;
+    if (!winners || winners.length === 0) {
+      message.error('Please assign at least one position winner before updating result');
+      return;
+    }
+    confirm({
+      title: 'Update Published Result?',
+      icon: <ExclamationCircleOutlined className="text-amber-500" />,
+      content: 'This will recalculate and adjust awarded points for students and house groups, then update the live result.',
+      okText: 'Yes, Update Result',
+      onOk: async () => {
+        try {
+          await apiClient.put(`/results/${resultId}`, {
+            competition: selectedCompId,
+            winners
+          });
+          message.success('Published result updated successfully!');
+          await fetchCompetitionsAndResults();
+          setSelectedCompId(null);
+        } catch (error: any) {
+          message.error(error.response?.data?.message || 'Failed to update result');
         }
       }
     });
@@ -186,20 +255,17 @@ const Results = () => {
     
     return (
       <Card title={title} bordered={false} style={{ background: color, minHeight: 300 }}>
-        {status !== 'published' && (
-          <Select 
-            placeholder={`Add ${rank} Place`}
-            style={{ width: '100%', marginBottom: 16 }}
-            onChange={(val) => { if(val) handleAddWinner(rank, val); }}
-            value={null}
-            showSearch
-            optionFilterProp="children"
-          >
-            {participants.map((p, idx) => (
-              <Select.Option key={idx} value={`${p._id}::${p.chestCode || ''}`}>{p.name}</Select.Option>
-            ))}
-          </Select>
-        )}
+        <Select 
+          placeholder={`Add ${rank} Place`}
+          style={{ width: '100%', marginBottom: 16 }}
+          onChange={(val) => { if(val) handleAddWinner(rank, val); }}
+          value={null}
+          showSearch={false}
+        >
+          {participants.map((p, idx) => (
+            <Select.Option key={idx} value={`${p._id}::${p.chestCode || ''}`}>{p.name}</Select.Option>
+          ))}
+        </Select>
 
         <Space direction="vertical" style={{ width: '100%' }}>
           {rankWinners.map((w, idx) => {
@@ -209,11 +275,9 @@ const Results = () => {
               <Card key={idx} size="small" className="shadow-sm">
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-semibold">{pName}</span>
-                  {status !== 'published' && (
-                    <Button type="text" danger size="small" onClick={() => handleRemoveWinner(w.participant, rank, w.chestCode)}>
-                      Remove
-                    </Button>
-                  )}
+                  <Button type="text" danger size="small" onClick={() => handleRemoveWinner(w.participant, rank, w.chestCode)}>
+                    Remove
+                  </Button>
                 </div>
                 <div className="flex items-center gap-2">
                   <Text type="secondary" className="text-xs">Points:</Text>
@@ -221,7 +285,6 @@ const Results = () => {
                     min={0} 
                     value={w.pointsAwarded} 
                     onChange={(val) => handleUpdatePoints(w.participant, rank, w.chestCode, val)} 
-                    disabled={status === 'published'}
                     size="small"
                   />
                 </div>
@@ -250,6 +313,16 @@ const Results = () => {
       render: (type: string) => <Tag color="purple">{type.toUpperCase()}</Tag>,
     },
     {
+      title: 'Result Status',
+      key: 'resultStatus',
+      render: (_: any, record: any) => {
+        const resStatus = resultsMap[record._id] || 'pending';
+        const color = resStatus === 'published' ? 'success' : resStatus === 'draft' ? 'warning' : 'default';
+        const label = resStatus === 'published' ? 'ANNOUNCED' : resStatus === 'draft' ? 'DRAFTED' : 'PENDING';
+        return <Tag color={color}>{label}</Tag>;
+      }
+    },
+    {
       title: 'Action',
       key: 'action',
       render: (_: any, record: any) => (
@@ -259,7 +332,7 @@ const Results = () => {
           onClick={() => loadCompetitionData(record)}
           style={{ backgroundColor: 'var(--color-primary)' }}
         >
-          Grade Results
+          {resultsMap[record._id] === 'published' ? 'Edit Result' : resultsMap[record._id] === 'draft' ? 'Edit Draft' : 'Grade Result'}
         </Button>
       ),
     },
@@ -276,15 +349,28 @@ const Results = () => {
 
       {!selectedCompId ? (
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
             <Title level={4} className="!m-0">Select Competition to Grade</Title>
-            <Input
-              placeholder="Search competitions..."
-              prefix={<SearchOutlined className="text-gray-400" />}
-              onChange={e => setSearch(e.target.value)}
-              style={{ width: 300 }}
-              allowClear
-            />
+            <div className="flex flex-wrap items-center gap-3">
+              <Select
+                value={statusFilter}
+                onChange={setStatusFilter}
+                style={{ width: 150 }}
+                options={[
+                  { value: 'all', label: 'All Statuses' },
+                  { value: 'pending', label: 'Pending' },
+                  { value: 'draft', label: 'Drafted' },
+                  { value: 'published', label: 'Announced' },
+                ]}
+              />
+              <Input
+                placeholder="Search competitions..."
+                prefix={<SearchOutlined className="text-gray-400" />}
+                onChange={e => setSearch(e.target.value)}
+                style={{ width: 220 }}
+                allowClear
+              />
+            </div>
           </div>
           <Table
             columns={compColumns}
@@ -314,20 +400,31 @@ const Results = () => {
                 )}
               </div>
               
-              {status !== 'published' && (
-                <Space>
-                  <Button icon={<SaveOutlined />} onClick={saveDraft}>Save Draft</Button>
+              <Space>
+                {status === 'published' ? (
                   <Button 
                     type="primary" 
-                    icon={<SendOutlined />} 
-                    onClick={publishResult}
-                    disabled={!resultId} // Must be a draft first to get an ID
-                    style={{ backgroundColor: 'var(--color-primary)' }}
+                    icon={<SaveOutlined />} 
+                    onClick={updatePublishedResult}
+                    style={{ backgroundColor: '#059669', borderColor: '#059669' }}
                   >
-                    Publish Points
+                    Update Published Result
                   </Button>
-                </Space>
-              )}
+                ) : (
+                  <>
+                    <Button icon={<SaveOutlined />} onClick={saveDraft}>Save Draft</Button>
+                    <Button 
+                      type="primary" 
+                      icon={<SendOutlined />} 
+                      onClick={publishResult}
+                      disabled={!resultId} // Must be a draft first to get an ID
+                      style={{ backgroundColor: 'var(--color-primary)' }}
+                    >
+                      Publish Points
+                    </Button>
+                  </>
+                )}
+              </Space>
             </div>
 
             <Row gutter={[16, 16]}>

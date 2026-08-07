@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Input, Pagination, Spin, Select, Modal, Tag, Avatar } from 'antd';
+import { Input, Pagination, Spin, Select, Modal, Avatar } from 'antd';
 import { SearchOutlined, TrophyOutlined } from '@ant-design/icons';
 import { motion } from 'framer-motion';
 import apiClient from '../../services/apiClient';
@@ -220,102 +220,94 @@ const Participants = () => {
         onCancel={() => setModalVisible(false)}
         footer={null}
         centered
-        width={600}
+        width={620}
         styles={{ body: { padding: 0 } }}
+        className="dark-modal"
       >
         {modalLoading || !selectedStudent ? (
-          <div className="py-20 text-center"><Spin size="large" /></div>
+          <div className="py-24 text-center bg-slate-900 rounded-3xl"><Spin size="large" /></div>
         ) : (
-          <div className="p-8" style={{ background: 'var(--ink-navy)' }}>
+          <div className="p-8 md:p-10 rounded-3xl bg-slate-900 border border-slate-800 text-white relative overflow-hidden shadow-2xl">
+            {/* Background Radiant Blur */}
+            <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-sky-500/10 blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
+
             {/* Profile Header */}
-            <div className="flex items-center space-x-6 mb-8">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-6 mb-8 pb-6 border-b border-slate-800 relative z-10">
               {selectedStudent.profileImage ? (
-                <Avatar src={selectedStudent.profileImage} size={90} style={{ border: '3px solid var(--glass-border)' }} />
+                <Avatar src={selectedStudent.profileImage} size={96} className="border-4 border-slate-700 shadow-xl shrink-0" />
               ) : (
                 <Avatar
-                  size={90}
+                  size={96}
+                  className="shrink-0 border-4 border-slate-700 shadow-xl"
                   style={{
-                    backgroundColor: 'var(--emerald-deep)',
-                    fontSize: '36px',
-                    fontWeight: 'bold',
+                    backgroundColor: '#0F4C3A',
+                    fontSize: '40px',
+                    fontWeight: '900',
                     fontFamily: 'var(--font-display)',
-                    color: 'var(--brass-gold)',
-                    border: '3px solid var(--glass-border)',
+                    color: '#C9A063',
                   }}
                 >
                   {selectedStudent.name.charAt(0).toUpperCase()}
                 </Avatar>
               )}
-              <div>
+              <div className="flex-1">
                 <h2
-                  className="text-2xl md:text-3xl font-bold m-0"
-                  style={{ fontFamily: 'var(--font-display)', color: 'var(--ivory-parchment)' }}
+                  className="text-3xl font-black text-white m-0 leading-tight"
+                  style={{ fontFamily: 'var(--font-display)' }}
                 >
                   {selectedStudent.name}
                 </h2>
-                <p className="font-medium mt-1" style={{ color: 'rgba(243, 236, 221, 0.5)' }}>Class {selectedStudent.class}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <p className="font-bold text-slate-400 mt-1 text-sm">Class: {selectedStudent.class}</p>
+                <div className="mt-3 flex flex-wrap justify-center sm:justify-start gap-2">
                   {selectedStudent.chestNo && (
-                    <Tag style={{ background: 'rgba(201,160,99,0.1)', border: '1px solid rgba(201,160,99,0.2)', color: 'var(--brass-gold)' }}>
-                      Chest: {selectedStudent.chestNo}
-                    </Tag>
+                    <span className="px-3 py-1 rounded-full text-xs font-mono font-black bg-amber-400/10 text-amber-400 border border-amber-400/20">
+                      CHEST #{selectedStudent.chestNo}
+                    </span>
                   )}
-                  <Tag style={{ background: 'rgba(26,122,94,0.15)', border: '1px solid rgba(26,122,94,0.25)', color: 'var(--emerald-light)' }}>
-                    {selectedStudent.group?.name || 'No Group'}
-                  </Tag>
-                  <Tag style={{ background: 'rgba(110,36,48,0.15)', border: '1px solid rgba(110,36,48,0.25)', color: '#E8A0AC' }}>
-                    {selectedStudent.category?.toUpperCase()}
-                  </Tag>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                    {selectedStudent.group?.name || 'Individual'}
+                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    {selectedStudent.category}
+                  </span>
                 </div>
               </div>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              <div
-                className="p-4 rounded-2xl text-center"
-                style={{ background: 'rgba(26, 122, 94, 0.1)', border: '1px solid rgba(26, 122, 94, 0.2)' }}
-              >
-                <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--emerald-light)' }}>Total Points</div>
-                <div className="font-mono text-3xl font-bold" style={{ color: 'var(--brass-gold)' }}>{selectedStudent.points}</div>
+            <div className="grid grid-cols-2 gap-4 mb-8 relative z-10">
+              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 text-center">
+                <div className="text-[10px] font-black uppercase tracking-widest text-sky-400 mb-1">Total Score</div>
+                <div className="font-mono text-3xl font-black text-white">{selectedStudent.points} <span className="text-xs text-slate-400 font-sans">PTS</span></div>
               </div>
-              <div
-                className="p-4 rounded-2xl text-center"
-                style={{ background: 'rgba(243, 236, 221, 0.03)', border: '1px solid rgba(243, 236, 221, 0.08)' }}
-              >
-                <div className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: 'rgba(243, 236, 221, 0.4)' }}>Programs Enrolled</div>
-                <div className="font-mono text-3xl font-bold" style={{ color: 'var(--ivory-parchment)' }}>{selectedStudent.programs?.length || 0}</div>
+              <div className="p-5 rounded-2xl bg-slate-800/80 border border-slate-700/80 text-center">
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Programs Enrolled</div>
+                <div className="font-mono text-3xl font-black text-white">{selectedStudent.programs?.length || 0}</div>
               </div>
             </div>
 
             {/* Programs & Achievements */}
-            <div>
-              <h4 className="font-bold text-base mb-3 flex items-center gap-2" style={{ fontFamily: 'var(--font-display)', color: 'var(--ivory-parchment)' }}>
-                <TrophyOutlined style={{ color: 'var(--brass-gold)' }} /> Enrolled Programs & Achievements
+            <div className="relative z-10">
+              <h4 className="font-extrabold text-base mb-4 flex items-center gap-2 text-white" style={{ fontFamily: 'var(--font-display)' }}>
+                <TrophyOutlined className="text-amber-400" /> Enrolled Programs & Achievements
               </h4>
-              <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+              <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
                 {selectedStudent.programs?.map((p: any, idx: number) => {
                   const compName = p.competition?.name || 'Competition Program';
                   const rankStr = p.rankAwarded ? `${p.rankAwarded.toUpperCase()} ${getStarRating(p.rankAwarded)}` : null;
                   return (
                     <div
                       key={idx}
-                      className="flex justify-between items-center px-4 py-3 rounded-xl"
-                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)' }}
+                      className="flex justify-between items-center px-4 py-3.5 rounded-xl bg-slate-800/60 border border-slate-700/60"
                     >
-                      <span className="font-semibold text-sm" style={{ color: 'var(--ivory-parchment)' }}>{compName}</span>
+                      <span className="font-bold text-sm text-slate-200">{compName}</span>
                       {rankStr ? (
-                        <span
-                          className="font-bold text-sm px-3 py-1 rounded-md"
-                          style={{ background: 'rgba(201,160,99,0.1)', border: '1px solid rgba(201,160,99,0.2)', color: 'var(--brass-gold)' }}
-                        >
+                        <span className="font-black text-xs px-3 py-1 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/30">
                           {rankStr}
                         </span>
                       ) : (
-                        <span
-                          className="text-xs font-medium px-2.5 py-1 rounded"
-                          style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(243, 236, 221, 0.3)' }}
-                        >
+                        <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-700/80 text-slate-400">
                           Enrolled
                         </span>
                       )}
@@ -323,7 +315,7 @@ const Participants = () => {
                   );
                 })}
                 {(!selectedStudent.programs || selectedStudent.programs.length === 0) && (
-                  <p className="text-sm text-center py-4" style={{ color: 'rgba(243, 236, 221, 0.3)' }}>
+                  <p className="text-sm text-center py-6 text-slate-500 font-medium">
                     No programs assigned to this student.
                   </p>
                 )}

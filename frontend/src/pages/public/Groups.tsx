@@ -114,9 +114,9 @@ const Groups = () => {
                         </div>
                       )}
 
-                      {/* Group initial */}
+                      {/* Group initial / Logo */}
                       <div
-                        className="w-24 h-24 rounded-full flex items-center justify-center font-extrabold text-4xl mb-5 shadow-md group-hover:scale-105 transition-transform"
+                        className="w-24 h-24 rounded-full flex items-center justify-center font-extrabold text-4xl mb-5 shadow-md group-hover:scale-105 transition-transform overflow-hidden"
                         style={{
                           fontFamily: 'var(--font-display)',
                           background: 'linear-gradient(135deg, #0284C7, #0F4C3A)',
@@ -124,7 +124,11 @@ const Groups = () => {
                           border: '3px solid #E2E8F0',
                         }}
                       >
-                        {group.name.charAt(0)}
+                        {(group.logoUrl || group.logo || group.image) ? (
+                          <img src={group.logoUrl || group.logo || group.image} alt={group.name} className="w-full h-full object-cover" />
+                        ) : (
+                          group.name.charAt(0)
+                        )}
                       </div>
 
                       <h3

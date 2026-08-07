@@ -1,17 +1,19 @@
 import { useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
+import { message } from 'antd';
 import router from './router';
 import apiClient from './services/apiClient';
 import { RealtimeProvider } from './components/publiccomponents/RealtimeProvider';
 
 function App() {
   useEffect(() => {
-    // Non-blocking health check on app load
+    // Initial health check call
     apiClient
       .get('/health')
       .then((res) => {
         console.log('✅ Backend health check:', res.data);
+        message.success('Assalamu Alaikum', 4);
       })
       .catch((err) => {
         console.error('❌ Backend unreachable:', err.message);

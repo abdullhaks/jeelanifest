@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import type { MenuProps } from 'antd';
 import { 
   Table, Button, Input, Modal, Drawer, 
-  Form, Space, message, Typography, Avatar, Tag, Select, Upload, Dropdown, Row, Col
+  Form, Space, message, Typography, Avatar, Tag, Select, Upload, Dropdown
 } from 'antd';
 import { 
   SearchOutlined, PlusOutlined, EditOutlined, 
@@ -250,12 +250,7 @@ const Students = () => {
     }
   };
 
-  const getStarRating = (rank: string | null) => {
-    if (rank === '1st') return '⭐⭐⭐';
-    if (rank === '2nd') return '⭐⭐';
-    if (rank === '3rd') return '⭐';
-    return '';
-  };
+
 
   const groupFilterOptions = groups.map(g => ({ text: g.name, value: g._id }));
 
@@ -313,21 +308,14 @@ const Students = () => {
       title: 'Programs',
       render: (_: any, record: any) => {
         const progs = record.programs || [];
-        if (progs.length === 0) return <span className="text-gray-400 text-xs">No programs</span>;
-        
         return (
-          <Space direction="vertical" size={2}>
-            {progs.map((p: any, idx: number) => {
-              const compName = p.competition?.name || 'Unknown';
-              const rankStr = p.rankAwarded ? ` - ${p.rankAwarded.toUpperCase()} ${getStarRating(p.rankAwarded)}` : '';
-              return (
-                <div key={idx} className="text-xs bg-gray-50 px-2 py-1 rounded border border-gray-100 whitespace-nowrap">
-                  <span className="font-medium">{compName}</span>
-                  {rankStr && <span className="text-yellow-600 font-bold">{rankStr}</span>}
-                </div>
-              );
-            })}
-          </Space>
+          <Tag 
+            color={progs.length > 0 ? "purple" : "default"}
+            className="cursor-pointer font-bold"
+            onClick={() => openDetailModal(record)}
+          >
+            {progs.length} {progs.length === 1 ? 'Program' : 'Programs'}
+          </Tag>
         );
       }
     },
@@ -336,7 +324,6 @@ const Students = () => {
       key: 'action',
       render: (_: any, record: any) => {
         const items: MenuProps['items'] = [
-          { key: 'view', label: 'View Profile', icon: <EyeOutlined />, onClick: () => openDetailModal(record) },
           { key: 'edit', label: 'Edit Profile', icon: <EditOutlined />, onClick: () => openDrawer(record) },
           { key: 'programs', label: 'Manage Programs', icon: <ProfileOutlined />, onClick: () => openProgramsDrawer(record._id) },
           { type: 'divider' },
@@ -344,9 +331,17 @@ const Students = () => {
         ];
 
         return (
-          <Dropdown menu={{ items }} trigger={['click']}>
-            <Button type="text">Manage</Button>
-          </Dropdown>
+          <Space size="small">
+            <Button 
+              icon={<EyeOutlined />} 
+              type="text" 
+              onClick={() => openDetailModal(record)} 
+              title="View Student Profile"
+            />
+            <Dropdown menu={{ items }} trigger={['click']}>
+              <Button type="text">Manage</Button>
+            </Dropdown>
+          </Space>
         );
       },
     },
@@ -479,72 +474,116 @@ const Students = () => {
         </Form>
       </Drawer>
 
+      {/* Premium Student Profile Details Modal */}
       <Modal
-        title="Student Details"
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
         footer={[
-          <Button key="close" onClick={() => setDetailModalVisible(false)}>
-            Close
+          <Button key="close" type="primary" className="bg-sky-600 font-semibold" onClick={() => setDetailModalVisible(false)}>
+            Close Profile
           </Button>
         ]}
+        width={600}
+        title={null}
+        closable={true}
+        bodyStyle={{ padding: 0, borderRadius: '1rem', overflow: 'hidden' }}
       >
         {selectedStudent && (
-          <div className="space-y-6">
-            <div className="flex items-center space-x-4">
-              {selectedStudent.profileImage ? (
-                <Avatar src={selectedStudent.profileImage} size={80} />
-              ) : (
-                <Avatar size={80} style={{ backgroundColor: '#1890ff', fontSize: 36 }}>
-                  {selectedStudent.name.charAt(0).toUpperCase()}
-                </Avatar>
-              )}
-              <div>
-                <Title level={4} className="!m-0">{selectedStudent.name}</Title>
-                <div className="text-gray-500">
-                  Class: {selectedStudent.class} 
-                  {selectedStudent.chestNo && ` | Chest No: ${selectedStudent.chestNo}`}
+          <div className="bg-white">
+            {/* Header Ribbon */}
+            <div className="bg-gradient-to-r from-slate-900 via-sky-950 to-slate-900 p-6 text-white relative">
+              <div className="flex items-center gap-5">
+                <div className="relative shrink-0">
+                  {selectedStudent.profileImage ? (
+                    <Avatar src={selectedStudent.profileImage} size={76} className="border-4 border-white/20 shadow-xl" />
+                  ) : (
+                    <Avatar size={76} className="bg-gradient-to-tr from-sky-500 to-indigo-500 font-black text-3xl border-4 border-white/20 shadow-xl">
+                      {selectedStudent.name.charAt(0).toUpperCase()}
+                    </Avatar>
+                  )}
+                  {selectedStudent.chestNo && (
+                    <span className="absolute -bottom-2 font-mono left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-slate-900 text-sky-400 text-[10px] font-black tracking-wider border border-sky-400/40 shadow-sm">
+                      #{selectedStudent.chestNo}
+                    </span>
+                  )}
                 </div>
-                <div className="mt-1">
-                  <Tag color="blue">{selectedStudent.group?.name || 'No Group'}</Tag>
-                  <Tag>{selectedStudent.category?.toUpperCase()}</Tag>
+                <div>
+                  <div className="inline-block px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md text-[10px] font-mono font-bold tracking-widest text-sky-300 uppercase mb-1">
+                    Student Participant Profile
+                  </div>
+                  <h2 className="text-2xl font-black text-white font-display leading-tight">{selectedStudent.name}</h2>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-200 border border-sky-400/30 text-xs font-semibold">
+                      Class {selectedStudent.class}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-200 border border-purple-400/30 text-xs font-semibold uppercase">
+                      {selectedStudent.category}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30 text-xs font-extrabold">
+                      🏠 {selectedStudent.group?.name || 'No House Group'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <Row gutter={[16, 16]}>
-              <Col span={12}>
-                <div className="bg-gray-50 p-3 rounded text-center">
-                  <div className="text-gray-500 text-xs uppercase tracking-wide">Total Points</div>
-                  <div className="text-2xl font-bold text-emerald-600">{selectedStudent.points}</div>
+            {/* Content Body */}
+            <div className="p-6 space-y-6">
+              {/* Stats Overview Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 via-emerald-50 to-white border border-emerald-200/60 text-center shadow-2xs">
+                  <div className="text-[11px] font-mono font-black text-emerald-700 uppercase tracking-widest">Total Points</div>
+                  <div className="text-3xl font-black text-emerald-600 font-mono mt-1">{selectedStudent.points || 0}</div>
                 </div>
-              </Col>
-              <Col span={12}>
-                <div className="bg-gray-50 p-3 rounded text-center">
-                  <div className="text-gray-500 text-xs uppercase tracking-wide">Programs</div>
-                  <div className="text-2xl font-bold">{selectedStudent.programs?.length || 0}</div>
+                <div className="p-4 rounded-xl bg-gradient-to-br from-sky-500/10 via-sky-50 to-white border border-sky-200/60 text-center shadow-2xs">
+                  <div className="text-[11px] font-mono font-black text-sky-700 uppercase tracking-widest">Enrolled Programs</div>
+                  <div className="text-3xl font-black text-sky-600 font-mono mt-1">{selectedStudent.programs?.length || 0}</div>
                 </div>
-              </Col>
-            </Row>
+              </div>
 
-            <div>
-              <Text strong>Enrolled Programs & Results</Text>
-              <div className="mt-2 space-y-2">
-                {selectedStudent.programs?.map((p: any, idx: number) => {
-                  const compName = p.competition?.name || 'Unknown';
-                  const catStr = p.competition?.category ? `(${p.competition.category})` : '';
-                  const rankStr = p.rankAwarded ? ` - ${p.rankAwarded.toUpperCase()} ${getStarRating(p.rankAwarded)}` : '';
-                  return (
-                    <div key={idx} className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded border border-gray-100">
-                      <div>
-                        <div className="font-medium">{compName} <span className="text-gray-500 text-xs">{catStr}</span></div>
-                      </div>
-                      {rankStr && <span className="text-yellow-600 font-bold">{rankStr}</span>}
-                    </div>
-                  );
-                })}
-                {(!selectedStudent.programs || selectedStudent.programs.length === 0) && (
-                  <Text type="secondary">No programs enrolled</Text>
+              {/* Enrolled Programs & Performance */}
+              <div>
+                <div className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider mb-3">
+                  Enrolled Competitions & Results ({selectedStudent.programs?.length || 0})
+                </div>
+
+                {selectedStudent.programs && selectedStudent.programs.length > 0 ? (
+                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    {selectedStudent.programs.map((p: any, idx: number) => {
+                      const compName = p.competition?.name || 'Unknown Competition';
+                      const catStr = p.competition?.category ? `(${p.competition.category.toUpperCase()})` : '';
+                      const rank = p.rankAwarded;
+                      return (
+                        <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between hover:bg-slate-100/80 transition-colors">
+                          <div>
+                            <div className="font-bold text-xs text-slate-900 font-display">
+                              {compName} <span className="text-slate-400 font-normal text-[11px] ml-1">{catStr}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-500 mt-0.5">
+                              {p.competition?.type ? `Type: ${p.competition.type}` : 'Individual Event'}
+                            </div>
+                          </div>
+                          {rank ? (
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-black shadow-2xs ${
+                              rank === '1st' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                              rank === '2nd' ? 'bg-slate-200 text-slate-800 border border-slate-300' :
+                              'bg-orange-100 text-orange-800 border border-orange-300'
+                            }`}>
+                              {rank === '1st' ? '🥇 1st Place' : rank === '2nd' ? '🥈 2nd Place' : '🥉 3rd Place'}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold text-slate-400 bg-slate-100">
+                              Enrolled
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-6 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-center text-xs text-slate-400">
+                    No programs enrolled for this student.
+                  </div>
                 )}
               </div>
             </div>

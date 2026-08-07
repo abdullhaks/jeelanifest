@@ -5,13 +5,13 @@ import {
 } from 'antd';
 import { 
   SearchOutlined, PlusOutlined, EditOutlined, 
-  DeleteOutlined, ExclamationCircleOutlined 
+  DeleteOutlined, ExclamationCircleOutlined, EyeOutlined 
 } from '@ant-design/icons';
 import { z } from 'zod';
 import apiClient from '../../services/apiClient';
 
 const { confirm } = Modal;
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -38,6 +38,10 @@ const Competitions = () => {
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<{type?: string, status?: string, stage?: string}>({});
   const [sort, setSort] = useState<{sortBy: string, sortOrder: string}>({ sortBy: 'createdAt', sortOrder: 'desc' });
+
+  // Detail Modal State
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedComp, setSelectedComp] = useState<any>(null);
 
   // Drawer state
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -178,6 +182,18 @@ const Competitions = () => {
     }
   };
 
+  const formatTime12h = (timeStr?: string) => {
+    if (!timeStr) return '';
+    const [hoursStr, minutesStr] = timeStr.split(':');
+    let hours = parseInt(hoursStr, 10);
+    if (isNaN(hours)) return timeStr;
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const formattedHours = hours < 10 ? `0${hours}` : hours;
+    return `${formattedHours}:${minutesStr || '00'} ${ampm}`;
+  };
+
   const columns = [
     {
       title: 'Name',
@@ -206,28 +222,28 @@ const Competitions = () => {
         { text: 'Sub Junior', value: 'subJunior' },
         { text: 'Junior', value: 'junior' },
         { text: 'Senior', value: 'senior' },
+        { text: 'Group', value: 'group' },
       ],
       filterMultiple: false,
-      render: (cat: string) => cat ? <Tag color="cyan">{cat.toUpperCase()}</Tag> : <Tag>N/A</Tag>
+      render: (cat: string, record: any) => {
+        if (record.type === 'group') {
+          return <Tag color="geekblue">GROUP</Tag>;
+        }
+        return cat ? <Tag color="cyan">{cat.toUpperCase()}</Tag> : <Tag>N/A</Tag>;
+      }
     },
     {
-      title: 'Group Entries',
+      title: 'Entries',
       render: (_: any, record: any) => {
-        if (record.type === 'individual') return <span className="text-gray-400 text-xs">N/A</span>;
-        if (!record.groupEntries || record.groupEntries.length === 0) return <span className="text-gray-400 text-xs">No entries</span>;
+        const count = record.groupEntries?.length || 0;
         return (
-          <Space direction="vertical" size={2}>
-            {record.groupEntries.map((entry: any, i: number) => {
-              const groupId = typeof entry.group === 'object' ? entry.group._id : entry.group;
-              const groupObj = groups.find(g => g._id === groupId);
-              const groupName = groupObj ? groupObj.name : (typeof entry.group === 'object' ? entry.group.name : 'Unknown Group');
-              return (
-                <div key={i} className="text-xs bg-gray-50 px-2 py-1 rounded border border-gray-100 whitespace-nowrap">
-                  <span className="font-medium">{groupName}:</span> {entry.chestCodes?.length ? entry.chestCodes.join(', ') : 'No codes'}
-                </div>
-              );
-            })}
-          </Space>
+          <Tag 
+            color={count > 0 ? "blue" : "default"} 
+            className="cursor-pointer font-bold"
+            onClick={() => openDetailModal(record)}
+          >
+            {count} {count === 1 ? 'Entry' : 'Entries'}
+          </Tag>
         );
       }
     },
@@ -271,19 +287,28 @@ const Competitions = () => {
     },
     {
       title: 'Date & Time',
-      render: (_: any, record: any) => `${record.date} ${record.time}`
+      render: (_: any, record: any) => {
+        const t12 = formatTime12h(record.time);
+        return [record.date, t12].filter(Boolean).join(' ') || 'N/A';
+      }
     },
     {
       title: 'Action',
       key: 'action',
       render: (_: any, record: any) => (
         <Space size="middle">
+          <Button icon={<EyeOutlined />} onClick={() => openDetailModal(record)} type="text" title="View Competition Details" />
           <Button icon={<EditOutlined />} onClick={() => openDrawer(record)} type="text" />
           <Button icon={<DeleteOutlined />} onClick={() => handleDelete(record._id)} type="text" danger />
         </Space>
       ),
     },
   ];
+
+  const openDetailModal = (record: any) => {
+    setSelectedComp(record);
+    setDetailModalVisible(true);
+  };
 
   return (
     <div>
@@ -463,6 +488,86 @@ const Competitions = () => {
           </div>
         </Form>
       </Drawer>
+
+      {/* Competition Detail Modal */}
+      <Modal
+        title={selectedComp ? `Competition Details: ${selectedComp.name}` : 'Competition Details'}
+        open={detailModalVisible}
+        onCancel={() => setDetailModalVisible(false)}
+        footer={[
+          <Button key="close" type="primary" onClick={() => setDetailModalVisible(false)}>
+            Close
+          </Button>
+        ]}
+        width={650}
+      >
+        {selectedComp && (
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div>
+                <Text type="secondary" className="text-xs uppercase font-bold block">Type</Text>
+                <Tag color={selectedComp.type === 'group' ? 'geekblue' : 'purple'} className="mt-1">
+                  {selectedComp.type?.toUpperCase()}
+                </Tag>
+              </div>
+              <div>
+                <Text type="secondary" className="text-xs uppercase font-bold block">Category</Text>
+                <Tag color={selectedComp.type === 'group' ? 'geekblue' : 'cyan'} className="mt-1">
+                  {selectedComp.type === 'group' ? 'GROUP' : selectedComp.category ? selectedComp.category.toUpperCase() : 'N/A'}
+                </Tag>
+              </div>
+              <div>
+                <Text type="secondary" className="text-xs uppercase font-bold block">Stage</Text>
+                <Tag className="mt-1">{selectedComp.stage || 'Unassigned'}</Tag>
+              </div>
+              <div>
+                <Text type="secondary" className="text-xs uppercase font-bold block">Status</Text>
+                <Tag color={selectedComp.status === 'ended' ? 'success' : selectedComp.status === 'started' ? 'processing' : 'default'} className="mt-1">
+                  {selectedComp.status?.toUpperCase()}
+                </Tag>
+              </div>
+              <div>
+                <Text type="secondary" className="text-xs uppercase font-bold block">Date & Time</Text>
+                <Text className="font-semibold text-sm font-mono">
+                  {[selectedComp.date, formatTime12h(selectedComp.time)].filter(Boolean).join(' ') || 'N/A'}
+                </Text>
+              </div>
+              <div>
+                <Text type="secondary" className="text-xs uppercase font-bold block">Total Entries</Text>
+                <Text className="font-bold text-sm">{selectedComp.groupEntries?.length || 0} Registered Groups</Text>
+              </div>
+            </div>
+
+            <div>
+              <Title level={5} className="!mt-4 !mb-2">Registered Group & Chest Code Entries</Title>
+              {selectedComp.groupEntries && selectedComp.groupEntries.length > 0 ? (
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {selectedComp.groupEntries.map((entry: any, i: number) => {
+                    const groupId = typeof entry.group === 'object' ? entry.group._id : entry.group;
+                    const groupObj = groups.find(g => g._id === groupId);
+                    const groupName = groupObj ? groupObj.name : (typeof entry.group === 'object' ? entry.group.name : 'Unknown Group');
+                    return (
+                      <div key={i} className="p-3 bg-white border border-gray-200 rounded-lg flex items-center justify-between">
+                        <div>
+                          <div className="font-bold text-slate-800">{groupName}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            Chest Codes: {entry.chestCodes?.length ? entry.chestCodes.join(', ') : 'None'}
+                          </div>
+                        </div>
+                        <Tag color="blue">{entry.chestCodes?.length || 0} Codes</Tag>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-6 text-center text-gray-400 bg-gray-50 rounded-lg">
+                  No group entries registered for this competition.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

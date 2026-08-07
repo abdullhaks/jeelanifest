@@ -9,6 +9,7 @@
 @layer base {
   :root {
     /* ── 6 Named Color Tokens ── */
+    --color-primary:     #0284C7;
     --snow-white:        #F8F9FA;
     --snow-white-pure:   #FFFFFF;
     --slate-dark:        #0F172A;
@@ -322,64 +323,41 @@
   }
 
   /* ═══════════════════════════════════════
-     ANT DESIGN OVERRIDES for public side
+     ANT DESIGN & GLOBAL UI ACCESSIBILITY OVERRIDES
      ═══════════════════════════════════════ */
-  .ant-modal-content {
+  .ant-btn-primary {
+    background-color: var(--color-primary, #0284C7) !important;
+    color: #FFFFFF !important;
+    border-color: var(--color-primary, #0284C7) !important;
+    font-weight: 600;
+  }
+  .ant-btn-primary:hover, .ant-btn-primary:focus {
+    background-color: #0369A1 !important;
+    border-color: #0369A1 !important;
+    color: #FFFFFF !important;
+  }
+
+  /* High contrast search placeholders */
+  ::placeholder,
+  .ant-input::placeholder,
+  .ant-input-search input::placeholder {
+    color: #64748B !important;
+    opacity: 1 !important;
+  }
+
+  /* Admin inputs clear styling */
+  .ant-layout .ant-input,
+  .ant-layout .ant-select-selector {
+    color: #0F172A;
+  }
+
+  /* Modal dark override only for dark themed public modals */
+  .dark-modal .ant-modal-content {
     background: var(--ink-navy) !important;
     border: 1px solid var(--glass-border) !important;
     border-radius: var(--radius-card) !important;
   }
-  .ant-modal-close {
+  .dark-modal .ant-modal-close {
     color: var(--ivory-parchment) !important;
-  }
-  .ant-pagination .ant-pagination-item {
-    background: var(--glass-bg) !important;
-    border-color: var(--glass-border) !important;
-  }
-  .ant-pagination .ant-pagination-item a {
-    color: var(--ivory-parchment) !important;
-  }
-  .ant-pagination .ant-pagination-item-active {
-    background: var(--emerald-deep) !important;
-    border-color: var(--brass-gold) !important;
-  }
-  .ant-pagination .ant-pagination-item-active a {
-    color: var(--brass-gold) !important;
-  }
-  .ant-pagination .ant-pagination-prev button,
-  .ant-pagination .ant-pagination-next button {
-    color: var(--ivory-parchment) !important;
-  }
-  .ant-select-selector {
-    background: var(--glass-bg) !important;
-    border-color: var(--glass-border) !important;
-    color: var(--ivory-parchment) !important;
-  }
-  .ant-select-arrow {
-    color: var(--brass-gold) !important;
-  }
-  .ant-input {
-    background: var(--glass-bg) !important;
-    border-color: var(--glass-border) !important;
-    color: var(--ivory-parchment) !important;
-  }
-  .ant-input::placeholder {
-    color: rgba(243, 236, 221, 0.4) !important;
-  }
-  .ant-input-affix-wrapper {
-    background: var(--glass-bg) !important;
-    border-color: var(--glass-border) !important;
-  }
-  .ant-spin-dot-item {
-    background: var(--brass-gold) !important;
-  }
-  .ant-tabs-tab {
-    color: rgba(243, 236, 221, 0.5) !important;
-  }
-  .ant-tabs-tab-active .ant-tabs-tab-btn {
-    color: var(--brass-gold) !important;
-  }
-  .ant-tabs-ink-bar {
-    background: var(--brass-gold) !important;
   }
 }
