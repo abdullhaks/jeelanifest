@@ -56,7 +56,7 @@ const PublicFooter: React.FC = () => {
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-3 mb-4 group">
               <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-600 to-sky-500 flex items-center justify-center text-white font-extrabold text-xl shadow-md group-hover:scale-105 transition-transform shrink-0">
-                <img src="logo1.png" alt="" className='w-full h-full object-cover rounded-full' />
+                <img src="logo1.jpeg" alt="" className='w-full h-full object-cover rounded-full' />
               </div>
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 <span className="font-extrabold text-2xl tracking-tight text-slate-900 leading-none" style={{ fontFamily: 'var(--font-display)' }}>

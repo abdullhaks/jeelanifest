@@ -46,7 +46,7 @@ const PublicHeader: React.FC = () => {
           {/* Logo */}
           <Link to="/" className="group flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-600 to-sky-500 flex items-center justify-center text-white font-extrabold text-lg shadow-md group-hover:scale-105 transition-transform">
-              <img src="logo1.png" alt="" className='w-full h-full object-cover rounded-full' />
+              <img src="logo1.jpeg" alt="" className='w-full h-full object-cover rounded-full' />
             </div>
             <div className="flex flex-col">
               <span

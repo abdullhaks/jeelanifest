@@ -10,24 +10,32 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'icon-512.svg'],
+      includeAssets: ['logo1.jpeg', 'favicon.svg'],
       manifest: {
         name: 'Jeelani Fest 2026',
         short_name: 'Jeelani Fest',
-        description: 'Art Fest Management System',
+        description: 'Art Fest Management System | Sheikh Jeelani Islamic Academy',
         theme_color: '#0f172a', // slate-900 matching design system
         background_color: '#0f172a',
         display: 'standalone',
         icons: [
           {
-            src: 'icon.svg',
+            src: 'logo1.jpeg',
             sizes: '192x192',
-            type: 'image/svg+xml'
+            type: 'image/jpeg',
+            purpose: 'any'
           },
           {
-            src: 'icon-512.svg',
+            src: 'logo1.jpeg',
             sizes: '512x512',
-            type: 'image/svg+xml'
+            type: 'image/jpeg',
+            purpose: 'any'
+          },
+          {
+            src: 'logo1.jpeg',
+            sizes: '512x512',
+            type: 'image/jpeg',
+            purpose: 'maskable'
           }
         ]
       },

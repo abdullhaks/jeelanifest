@@ -57,7 +57,7 @@ const Sidebar = ({ collapsed, onCollapse, isMobile }: SidebarProps) => {
           <>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-600 to-teal-500 flex items-center justify-center text-white font-black text-sm shadow-xs">
-                <img src="/logo1.png" alt="" className='w-full h-full object-cover rounded-xl' />
+                <img src="/logo1.jpeg" alt="" className='w-full h-full object-cover rounded-xl' />
               </div>
               <span className="text-base font-extrabold font-display tracking-tight text-slate-900 truncate">
                 Jeelani Fest <span className="text-amber-600 font-mono text-sm font-bold">26</span>

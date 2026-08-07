@@ -118,7 +118,7 @@ const Topbar = ({ collapsed, onCollapse, isMobile: _isMobile }: TopbarProps) => 
                   <div className="flex items-center space-x-3">
                     <div className="relative">
                       <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center text-slate-950 font-black text-base shadow-md border-2 border-white/20">
-                        <img src="/logo1.png" alt="" className='w-full h-full object-cover rounded-full' />
+                        <img src="/logo1.jpeg" alt="" className='w-full h-full object-cover rounded-full' />
                       </div>
                       <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-slate-900" />
                     </div>
@@ -141,7 +141,7 @@ const Topbar = ({ collapsed, onCollapse, isMobile: _isMobile }: TopbarProps) => 
             <div className="flex items-center my-5 space-x-2.5 cursor-pointer bg-slate-50 hover:bg-slate-100/90 py-1.5 px-3 rounded-full border border-slate-200/80 transition-all shadow-2xs group">
               <div className="relative">
                 <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-sky-600 to-teal-500 flex items-center justify-center text-white font-black text-xs shadow-xs group-hover:scale-105 transition-transform">
-                  <img src="/logo1.png" alt="" className='w-full h-full object-cover rounded-full' />
+                  <img src="/logo1.jpeg" alt="" className='w-full h-full object-cover rounded-full' />
                 </div>
                 <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 border border-white" />
               </div>
