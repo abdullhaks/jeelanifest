@@ -4,6 +4,7 @@ import PublicHeader from './PublicHeader';
 import PublicFooter from './PublicFooter';
 import Lenis from 'lenis';
 import { LiveModals } from '../LiveModals';
+import { PWAInstallPrompt } from './PWAInstallPrompt';
 import { useModalStore } from '../../../store/modalStore';
 import { io } from 'socket.io-client';
 
@@ -59,6 +60,7 @@ const PublicShell: React.FC = () => {
       
       <PublicFooter />
       <LiveModals />
+      <PWAInstallPrompt />
     </div>
   );
 };
