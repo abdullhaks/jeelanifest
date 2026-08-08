@@ -168,9 +168,9 @@ const ProAnalytics: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg md:text-xl font-extrabold tracking-tight text-slate-900 leading-none" style={{ fontFamily: 'var(--font-display)' }}>
-                Jeelani Fest 2026 Pro Scoreboard
+                Jeelani Fest 2026 Pro Live Arena
               </h1>
-              <LiveBadge label="PRO ARENA" />
+              <LiveBadge label="PRO LIVE ARENA" />
             </div>
             <p className="text-[10px] text-slate-500 font-bold mt-0.5">
               Sheikh Jeelani Academy • Real-Time Auditorium Screen Analytics

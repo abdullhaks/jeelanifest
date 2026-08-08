@@ -394,7 +394,7 @@ const Home = () => {
               { name: 'Results', path: '/results', icon: <Award size={15} />, bg: 'bg-gradient-to-tr from-emerald-500 to-teal-400' },
               { name: 'Participants', path: '/participants', icon: <Users size={15} />, bg: 'bg-gradient-to-tr from-sky-500 to-blue-600' },
               { name: 'Gallery', path: '/festgallery', icon: <ImageIcon size={15} />, bg: 'bg-gradient-to-tr from-purple-500 to-indigo-500' },
-              { name: 'Pro Arena', path: '/analytics', icon: <BarChart3 size={15} />, bg: 'bg-gradient-to-tr from-rose-500 to-pink-500' },
+              { name: 'Pro Live Arena', path: '/analytics', icon: <BarChart3 size={15} />, bg: 'bg-gradient-to-tr from-rose-500 to-pink-500' },
             ].map((item) => (
               <button
                 key={item.name}

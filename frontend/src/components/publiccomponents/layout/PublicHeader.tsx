@@ -8,7 +8,7 @@ const navLinks = [
   { name: 'Results', path: '/results' },
   { name: 'Participants', path: '/participants' },
   { name: 'Gallery', path: '/festgallery' },
-  { name: 'Pro Arena 📊', path: '/analytics' },
+  { name: 'Pro Live Arena 📊', path: '/analytics' },
 ];
 
 const PublicHeader: React.FC = () => {
