@@ -77,7 +77,7 @@ const slides = [
 const coordinatorMembers = [
   {
     id: 1,
-    name: 'SHEIKH MUHAMMED ABDUL MAJEED HUDAWI. POONGOD',
+    name: 'SHEIKH MUHAMMED ABDUL MAJEED HUDAWI. POONGODE',
     role: 'CHAIRMAN JEELANI FEST 26',
     isChairman: true,
     photo: 'https://res.cloudinary.com/mqorn88v/image/upload/v1786117104/mj_nk2rhe.png',
@@ -95,7 +95,7 @@ const coordinatorMembers = [
   {
     id: 3,
     name: 'Gulam Muhammed Sharafullah Jeelani. Valapuram',
-    role: 'JOIN CONVENIR JEELANI FEST 26',
+    role: 'JOINT CONVENOR JEELANI FEST 26',
     isChairman: false,
     photo: 'https://res.cloudinary.com/mqorn88v/image/upload/v1786116891/gulam_ypk2lc.jpg',
     tag: 'Advisory Lead',
@@ -103,7 +103,7 @@ const coordinatorMembers = [
   {
     id: 4,
     name: 'AliShan Shad Jeelani .Manjery',
-    role: 'JOIN CONVENIR JEELANI FEST 26',
+    role: 'JOINT CONVENOR JEELANI FEST 26',
     isChairman: false,
     photo: 'https://res.cloudinary.com/mqorn88v/image/upload/v1786116892/WhatsApp_Image_2026-08-07_at_8.43.06_PM_bevxlj.jpg',
     tag: 'Stage Operations',
@@ -126,8 +126,8 @@ const coordinatorMembers = [
   },
   {
     id: 7,
-    name: 'Ahammed Fairooz. Valyora',
-    role: 'PROGRAMME COORDINATOR JEELANI FEST 26',
+    name: 'Ahammed Fairooz. Valiyora',
+    role: 'PROGRAM COORDINATOR JEELANI FEST 26',
     isChairman: false,
     photo: 'https://res.cloudinary.com/mqorn88v/image/upload/v1786118139/ChatGPT_Image_Aug_7_2026_09_25_27_PM_vchunb.png',
     tag: 'Student Affairs',
@@ -860,10 +860,10 @@ const Home = () => {
           <SectionHeading title="About Jeelani Fest" titleAr="عن مهرجان الجيلاني" centered={true} />
           <GlassCard className="p-8 md:p-12 bg-white border border-slate-200/90 shadow-sm text-center rounded-3xl" hover={false}>
             <p className="leading-relaxed mb-6 text-slate-700 text-base md:text-lg font-medium">
-              Jeelani Fest 2026 is the ultimate celebration of art, culture, and competitive spirit. Bringing together the brightest minds and most talented individuals, it serves as a prestigious platform for students to unleash their passion across hundreds of diverse programs.
+              JEELANI FEST 2026 is the official annual arts festival of Shaikh Jeelani Islamic Academy, celebrating creativity, literature, culture, and talent. Inspired by this year's theme, "Ink to Infinity", the fest encourages students to transform knowledge into expression and creativity into excellence.
             </p>
             <p className="leading-relaxed text-slate-500 text-sm md:text-base">
-              Rooted in tradition but looking towards the future, our festival is a testament to the power of creativity and the unifying force of artistic expression.
+              Bringing together students through a wide range of literary, artistic, and cultural competitions, Jeelani Fest provides a platform to discover talents, strengthen teamwork, and promote values rooted in Islamic heritage and academic excellence.
             </p>
           </GlassCard>
         </section>
