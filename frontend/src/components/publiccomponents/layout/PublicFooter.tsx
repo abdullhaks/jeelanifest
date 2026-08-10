@@ -78,8 +78,8 @@ const PublicFooter: React.FC = () => {
               The premier art and cultural festival of Sheikh Jeelani Islamic Academy, Kerala. Celebrating creative excellence, competitive spirit, and artistic talent.
             </p>
 
-              <p className="flex items-center gap-1">
-              Designed with <Heart size={12} className="text-primary fill-primary" /> By AKS
+              <p className="text-sm font-bold text-slate-600">
+              Designed with <Heart size={12} className="text-red-500 fill-red-500" /> By <span className="text-sky-600 font-extrabold">AKS</span>
             </p>
             
             {/* Social Icons Pill */}

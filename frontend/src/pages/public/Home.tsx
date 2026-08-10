@@ -753,7 +753,7 @@ const Home = () => {
               </p>
             </div>
             <button
-              onClick={() => navigate('/pro-analytics')}
+              onClick={() => navigate('/analytics')}
               className="relative z-10 px-8 py-4 rounded-full font-extrabold text-sm bg-sky-500 hover:bg-sky-400 text-white shadow-lg transition-all flex items-center gap-2 shrink-0 cursor-pointer"
             >
               View Live Results &rarr;
