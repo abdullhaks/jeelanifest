@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { LatticeBackground } from '../DesignSystem';
-import { Heart } from 'lucide-react';
 
 const PublicFooter: React.FC = () => {
   const scrollToTop = () => {
