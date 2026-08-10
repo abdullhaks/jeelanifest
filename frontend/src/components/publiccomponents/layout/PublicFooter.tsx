@@ -74,14 +74,11 @@ const PublicFooter: React.FC = () => {
               Sheikh Jeelani Islamic Academy
             </span>
 
-            <p className="text-slate-600 text-sm font-medium leading-relaxed max-w-sm mb-6">
+            <p className="text-slate-600 text-sm font-medium leading-relaxed max-w-sm mb-2">
               The premier art and cultural festival of Sheikh Jeelani Islamic Academy, Kerala. Celebrating creative excellence, competitive spirit, and artistic talent.
             </p>
 
-              <p className="text-sm font-bold text-slate-600">
-              Designed with <Heart size={12} className="text-red-500 fill-red-500" /> By <span className="text-sky-600 font-extrabold">AKS</span>
-            </p>
-            
+
             {/* Social Icons Pill */}
             <div className="flex gap-3">
               <a
@@ -196,6 +193,45 @@ const PublicFooter: React.FC = () => {
             </button>
           </div>
         </div>
+
+        <div className="mt-8 flex flex-col items-center gap-3">
+  <div className="h-px w-12 bg-slate-300/70" />
+
+  <p className="text-center text-[10px] font-light uppercase tracking-[0.25em] text-slate-500">
+    Designed & Built by{" "}
+    <a
+      href="https://www.abdullhakalamban.online/"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-medium text-slate-700 transition-colors duration-300 hover:text-slate-900"
+      title="Abdullha Ks"
+    >
+      Abdullha Ks
+    </a>
+  </p>
+
+  <p className="flex items-center text-[10px] font-light tracking-[0.15em] text-slate-400">
+    Made with
+    <span className="mx-2 text-red-400/80 transition-transform duration-300 hover:scale-125">
+      ♥
+    </span>
+    and endless cups of chai
+  </p>
+
+  <a
+    href="https://www.abdullhakalamban.online/"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="Visit Abdullha Ks portfolio"
+    title="Visit Portfolio"
+    className="group mt-1 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200/80 bg-white/40 text-slate-400 backdrop-blur-sm transition-all duration-300 hover:border-slate-300 hover:bg-white hover:text-slate-700 hover:shadow-sm"
+  >
+    <svg className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" > <circle cx="12" cy="12" r="9" /> <path d="M3 12h18" /> <path d="M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z" /> </svg>
+  </a>
+</div>
+
+
+            
 
       </div>
     </footer>
