@@ -806,10 +806,10 @@ const Home = () => {
 
         <BrassDivider />
 
-        {/* ── Goussiya Student Centre Section ── */}
+        {/* ── Gousiyya Students Centre Section ── */}
         <section className="relative z-10">
           <SectionHeading
-            title="Goussiya Student Centre"
+            title="Gousiyya Students Centre"
             titleAr="مركز الغوثية الطلابي"
             subtitle="Introducing our vibrant Student Council — the driving force behind Jeelani Fest 2026."
             centered={true}
@@ -823,7 +823,7 @@ const Home = () => {
                   </div>
                 </div>
                 <h3 className="font-extrabold text-xl text-slate-900 mb-1" style={{ fontFamily: 'var(--font-display)' }}>
-                  Goussiya Student Centre
+                  Gousiyya Students Centre
                 </h3>
                 <span className="text-xs font-bold uppercase tracking-widest text-sky-600 bg-sky-50 px-3 py-1 rounded-full border border-sky-100">
                   Apex Student Council
@@ -832,7 +832,7 @@ const Home = () => {
 
               <div className="md:col-span-2 space-y-4 text-slate-600 text-sm leading-relaxed">
                 <p>
-                  The <strong className="text-slate-900">Goussiya Student Centre (GSC)</strong> is the official student council governing body dedicated to empowering youth, fostering leadership, and organizing grand cultural events like <em>Jeelani Fest 2026</em>.
+                  The <strong className="text-slate-900">Gousiyya Students Centre (GSC)</strong> is the official student council governing body dedicated to empowering youth, fostering leadership, and organizing grand cultural events like <em>Jeelani Fest 2026</em>.
                 </p>
                 <p>
                   Through visionary leadership and collaborative execution, GSC nurtures artistic talents, intellectual debate, and cultural heritage across all participating institutions.
