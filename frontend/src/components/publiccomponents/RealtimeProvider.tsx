@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import confetti from 'canvas-confetti';
 import { notification } from 'antd';
-import { TrophyOutlined, StarFilled, CrownOutlined, RightOutlined, CloseOutlined } from '@ant-design/icons';
+import { 
+  TrophyOutlined, StarFilled, CrownOutlined, 
+  RightOutlined, CloseOutlined, ExclamationCircleOutlined 
+} from '@ant-design/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import apiClient from '../../services/apiClient';
 
@@ -11,6 +14,9 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Modals state
   const [resultVisible, setResultVisible] = useState(false);
   const [resultData, setResultData] = useState<any>(null);
+
+  const [withdrawnVisible, setWithdrawnVisible] = useState(false);
+  const [withdrawnData, setWithdrawnData] = useState<any>(null);
 
   const [finalVisible, setFinalVisible] = useState(false);
   const [finalData, setFinalData] = useState<any>(null);
@@ -27,6 +33,7 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     newSocket.on('result:published', (data: any) => {
       setResultData(data);
       setResultVisible(true);
+      setWithdrawnVisible(false);
       trigger10ConfettiPops();
       window.dispatchEvent(new CustomEvent('refresh-graphs'));
     });
@@ -40,6 +47,22 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           duration: 5,
         });
       }
+    });
+
+    newSocket.on('result:withdrawn', (data: any) => {
+      setWithdrawnData(data);
+      setWithdrawnVisible(true);
+      setResultVisible(false);
+
+      const compObj = typeof data?.competition === 'object' ? data?.competition : null;
+      const eventName = compObj?.name || 'Competition Event';
+      notification.warning({
+        message: '⚠️ Result Withdrawn Alert',
+        description: `The published result for "${eventName}" has been withdrawn by admin and points have been recalculated.`,
+        placement: 'topRight',
+        duration: 8,
+      });
+      window.dispatchEvent(new CustomEvent('refresh-graphs'));
     });
 
     newSocket.on('final:announced', (data: any) => {
@@ -137,6 +160,14 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     (typeof resultData?.competition === 'string' ? resultData?.competition : '') ||
     'Competition Event Result';
 
+  const wCompObj = typeof withdrawnData?.competition === 'object' ? withdrawnData?.competition : null;
+  const wEventName =
+    wCompObj?.name ||
+    withdrawnData?.competitionName ||
+    withdrawnData?.competitionId?.name ||
+    (typeof withdrawnData?.competition === 'string' ? withdrawnData?.competition : '') ||
+    'Competition Event';
+
   const categoryMap: Record<string, string> = {
     subJunior: 'Sub Junior',
     junior: 'Junior',
@@ -144,6 +175,7 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     general: 'General',
   };
   const eventCategory = compObj?.category ? (categoryMap[compObj.category] || compObj.category) : null;
+  const wCategory = wCompObj?.category ? (categoryMap[wCompObj.category] || wCompObj.category) : null;
   const eventType = compObj?.type === 'group' ? '👥 Group Event' : compObj?.type === 'individual' ? '👤 Individual Event' : null;
   const eventStage = compObj?.stage ? compObj.stage.toUpperCase() : null;
 
@@ -503,6 +535,97 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   className="px-8 py-3 rounded-full font-extrabold text-xs bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-yellow-300 text-slate-950 shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
                 >
                   Continue to Festival Site
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          REAL-TIME COMPETITION RESULT WITHDRAWN MODAL POPUP (PUBLIC UI)
+         ═══════════════════════════════════════════════════════════════ */}
+      <AnimatePresence>
+        {withdrawnVisible && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100001] flex items-center justify-center p-4 md:p-6 overflow-hidden"
+            style={{
+              background: 'rgba(0, 0, 0, 0.55)',
+              backdropFilter: 'blur(10px)',
+            }}
+            onClick={() => setWithdrawnVisible(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.85, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.85, y: 30 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 26 }}
+              className="relative w-full max-w-md my-auto flex flex-col justify-between rounded-3xl overflow-hidden shadow-2xl border border-rose-500/40"
+              style={{ background: 'linear-gradient(145deg, #1E1B2E 0%, #171226 60%, #0F0A1C 100%)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Glow */}
+              <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-rose-500/20 blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-20 -left-20 w-60 h-60 rounded-full bg-amber-500/15 blur-3xl pointer-events-none" />
+
+              {/* Close Button */}
+              <button
+                onClick={() => setWithdrawnVisible(false)}
+                className="absolute top-3.5 right-3.5 z-20 w-8 h-8 rounded-full bg-slate-800/80 border border-slate-700/80 text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition-all shadow-md cursor-pointer"
+                aria-label="Close Modal"
+              >
+                <CloseOutlined className="text-xs" />
+              </button>
+
+              {/* Header */}
+              <div className="pt-6 pb-4 px-6 text-center shrink-0 border-b border-slate-800/80">
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 mb-3 shadow-inner">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                    ⚠️ RESULT WITHDRAWN
+                  </span>
+                </div>
+
+                <div className="my-2 flex justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center shadow-lg shadow-rose-500/10">
+                    <ExclamationCircleOutlined className="text-3xl text-rose-400 drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]" />
+                  </div>
+                </div>
+
+                <h2 className="text-xl md:text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-rose-200 via-amber-200 to-rose-100 leading-tight mt-2 mb-1" style={{ fontFamily: 'var(--font-display)' }}>
+                  {wEventName}
+                </h2>
+
+                {wCategory && (
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30 inline-block mt-1">
+                    {wCategory}
+                  </span>
+                )}
+              </div>
+
+              {/* Body */}
+              <div className="p-6 text-center text-slate-300 text-sm leading-relaxed">
+                <p>
+                  The official result for <strong className="text-rose-300">{wEventName}</strong> has been withdrawn by the admin team.
+                </p>
+                <p className="mt-2 text-xs text-slate-400">
+                  All points previously awarded to participants and house groups for this event have been reverted, and live standings have been updated.
+                </p>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 px-6 shrink-0 bg-slate-950/70 border-t border-slate-800/80 flex justify-center">
+                <button
+                  onClick={() => {
+                    setWithdrawnVisible(false);
+                    window.dispatchEvent(new CustomEvent('refresh-graphs'));
+                  }}
+                  className="w-full py-2.5 px-5 rounded-xl font-extrabold text-xs bg-gradient-to-r from-rose-500 via-amber-500 to-rose-600 hover:from-rose-400 hover:to-amber-400 text-white shadow-lg shadow-rose-500/25 transition-all cursor-pointer"
+                >
+                  Got It & Refresh Leaderboard
                 </button>
               </div>
             </motion.div>

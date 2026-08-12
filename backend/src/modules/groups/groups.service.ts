@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Group, GroupDocument } from './group.schema';
@@ -9,14 +9,40 @@ import { PaginationQuery } from '../common/pagination.schema';
 import { paginate, PaginatedResult } from '../common/paginate.helper';
 
 @Injectable()
-export class GroupsService {
+export class GroupsService implements OnModuleInit {
   constructor(
     @InjectModel(Group.name) private groupModel: Model<GroupDocument>,
     @InjectModel(Student.name) private studentModel: Model<StudentDocument>,
     @InjectModel(Result.name) private resultModel: Model<ResultDocument>,
   ) {}
 
+  async onModuleInit() {
+    try {
+      const groups = await this.groupModel.find().exec();
+      for (const g of groups) {
+        if (g.name && g.name !== g.name.trim().toUpperCase()) {
+          g.name = g.name.trim().toUpperCase();
+          await g.save();
+        }
+      }
+    } catch (e) {
+      console.error('Migration error for group names:', e);
+    }
+  }
+
   async create(createDto: CreateGroupDto): Promise<Group> {
+    const nameUpper = createDto.name.trim().toUpperCase();
+    createDto.name = nameUpper;
+    const escapedName = nameUpper.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    const existing = await this.groupModel.findOne({
+      name: { $regex: new RegExp(`^${escapedName}$`, 'i') },
+      isDeleted: false
+    }).exec();
+    if (existing) {
+      throw new BadRequestException(`Group with name "${nameUpper}" already exists`);
+    }
+
     this.validateLeaders(createDto.members, createDto.leaders);
     const created = new this.groupModel(createDto);
     return created.save();
@@ -216,6 +242,21 @@ export class GroupsService {
     const group = await this.groupModel.findOne({ _id: id, isDeleted: false }).exec();
     if (!group) {
       throw new NotFoundException(`Group with ID ${id} not found`);
+    }
+
+    if (updateDto.name) {
+      const nameUpper = updateDto.name.trim().toUpperCase();
+      updateDto.name = nameUpper;
+      const escapedName = nameUpper.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      const existing = await this.groupModel.findOne({
+        _id: { $ne: id },
+        name: { $regex: new RegExp(`^${escapedName}$`, 'i') },
+        isDeleted: false
+      }).exec();
+      if (existing) {
+        throw new BadRequestException(`Group with name "${nameUpper}" already exists`);
+      }
     }
 
     // Since members are managed by Student collection, fetch them to validate leaders

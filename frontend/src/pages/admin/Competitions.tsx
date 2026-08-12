@@ -108,7 +108,7 @@ const Competitions = () => {
     confirm({
       title: 'Are you sure you want to delete this competition?',
       icon: <ExclamationCircleOutlined />,
-      content: 'This action cannot be undone.',
+      content: 'This action cannot be undone. Any published results regarding this competition will be deleted and awarded points will be automatically reverted from students and groups.',
       okText: 'Yes, Delete',
       okType: 'danger',
       onOk: async () => {

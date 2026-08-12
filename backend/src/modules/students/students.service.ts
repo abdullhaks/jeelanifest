@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Student, StudentDocument } from './student.schema';
@@ -8,13 +8,39 @@ import { paginate, PaginatedResult } from '../common/paginate.helper';
 import { Competition, CompetitionDocument } from '../competitions/competition.schema';
 
 @Injectable()
-export class StudentsService {
+export class StudentsService implements OnModuleInit {
   constructor(
     @InjectModel(Student.name) private studentModel: Model<StudentDocument>,
     @InjectModel(Competition.name) private competitionModel: Model<CompetitionDocument>,
   ) {}
 
+  async onModuleInit() {
+    try {
+      const students = await this.studentModel.find().exec();
+      for (const s of students) {
+        if (s.name && s.name !== s.name.trim().toUpperCase()) {
+          s.name = s.name.trim().toUpperCase();
+          await s.save();
+        }
+      }
+    } catch (e) {
+      console.error('Migration error for student names:', e);
+    }
+  }
+
   async create(createDto: CreateStudentDto): Promise<Student> {
+    const nameUpper = createDto.name.trim().toUpperCase();
+    createDto.name = nameUpper;
+    const escapedName = nameUpper.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    const existing = await this.studentModel.findOne({
+      name: { $regex: new RegExp(`^${escapedName}$`, 'i') },
+      class: createDto.class
+    }).exec();
+    if (existing) {
+      throw new BadRequestException(`Student with name "${nameUpper}" already exists in class ${createDto.class}`);
+    }
+
     const created = new this.studentModel(createDto);
     return created.save();
   }
@@ -52,6 +78,27 @@ export class StudentsService {
   }
 
   async update(id: string, updateDto: UpdateStudentDto): Promise<Student> {
+    const student = await this.studentModel.findById(id).exec();
+    if (!student) {
+      throw new NotFoundException(`Student with ID ${id} not found`);
+    }
+
+    if (updateDto.name) {
+      const nameUpper = updateDto.name.trim().toUpperCase();
+      updateDto.name = nameUpper;
+      const escapedName = nameUpper.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const targetClass = updateDto.class || student.class;
+
+      const existing = await this.studentModel.findOne({
+        _id: { $ne: id },
+        name: { $regex: new RegExp(`^${escapedName}$`, 'i') },
+        class: targetClass
+      }).exec();
+      if (existing) {
+        throw new BadRequestException(`Student with name "${nameUpper}" already exists in class ${targetClass}`);
+      }
+    }
+
     const updated = await this.studentModel
       .findByIdAndUpdate(id, updateDto, { new: true })
       .exec();

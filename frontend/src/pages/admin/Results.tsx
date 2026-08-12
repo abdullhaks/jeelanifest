@@ -3,7 +3,10 @@ import {
   Typography, Select, Button, Space, Card, Modal, 
   message, Row, Col, Tag, InputNumber, Table, Input
 } from 'antd';
-import { TrophyOutlined, SaveOutlined, SendOutlined, ExclamationCircleOutlined, SearchOutlined, ArrowLeftOutlined, EditOutlined } from '@ant-design/icons';
+import { 
+  TrophyOutlined, SaveOutlined, SendOutlined, ExclamationCircleOutlined, 
+  SearchOutlined, ArrowLeftOutlined, EditOutlined, UndoOutlined 
+} from '@ant-design/icons';
 import apiClient from '../../services/apiClient';
 
 const { Title, Text } = Typography;
@@ -222,6 +225,27 @@ const Results = () => {
     });
   };
 
+  const withdrawPublishedResult = () => {
+    if (!resultId) return;
+    confirm({
+      title: 'Withdraw Published Result?',
+      icon: <ExclamationCircleOutlined className="text-red-500" />,
+      content: 'This will revert all awarded points from students and groups, set the result status back to draft, and broadcast a real-time alert popup to all connected users.',
+      okText: 'Yes, Withdraw Result',
+      okType: 'danger',
+      onOk: async () => {
+        try {
+          await apiClient.post(`/results/${resultId}/withdraw`);
+          message.success('Result withdrawn successfully! Status reverted to draft.');
+          await fetchCompetitionsAndResults();
+          setSelectedCompId(null);
+        } catch (error: any) {
+          message.error(error.response?.data?.message || 'Failed to withdraw result');
+        }
+      }
+    });
+  };
+
   const submitFinalAnnouncement = () => {
     if (!finalChamps.first || !finalChamps.second || !finalChamps.third) {
       message.error('Please select all three podium positions');
@@ -402,14 +426,23 @@ const Results = () => {
               
               <Space>
                 {status === 'published' ? (
-                  <Button 
-                    type="primary" 
-                    icon={<SaveOutlined />} 
-                    onClick={updatePublishedResult}
-                    style={{ backgroundColor: '#059669', borderColor: '#059669' }}
-                  >
-                    Update Published Result
-                  </Button>
+                  <>
+                    <Button 
+                      danger 
+                      icon={<UndoOutlined />} 
+                      onClick={withdrawPublishedResult}
+                    >
+                      Withdraw Result
+                    </Button>
+                    <Button 
+                      type="primary" 
+                      icon={<SaveOutlined />} 
+                      onClick={updatePublishedResult}
+                      style={{ backgroundColor: '#059669', borderColor: '#059669' }}
+                    >
+                      Update Published Result
+                    </Button>
+                  </>
                 ) : (
                   <>
                     <Button icon={<SaveOutlined />} onClick={saveDraft}>Save Draft</Button>

@@ -43,6 +43,11 @@ export class ResultsController {
     return this.resultsService.updatePublishedResult(id, dto);
   }
 
+  @Post(':id/withdraw')
+  withdrawResult(@Param('id') id: string) {
+    return this.resultsService.withdrawResult(id);
+  }
+
   @Post('final-announcement')
   announceFinal(@Body(new ZodValidationPipe(finalAnnouncementSchema)) dto: FinalAnnouncementDto) {
     return this.resultsService.announceFinal(dto);
