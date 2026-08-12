@@ -163,7 +163,7 @@ const ProAnalytics: React.FC = () => {
       <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200 mb-4 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-500 via-teal-600 to-emerald-600 flex items-center justify-center text-white font-black text-sm shadow-sm">
-            ✨
+            <img src="logo1.jpeg" alt="" className='w-full h-full object-cover rounded-full' />
           </div>
           <div>
             <div className="flex items-center gap-2">
