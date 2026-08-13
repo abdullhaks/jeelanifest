@@ -10,11 +10,10 @@ import {
   CalendarOutlined, 
   ClockCircleOutlined, 
   EnvironmentOutlined,
-  CheckOutlined,
-  UserOutlined
+  CheckOutlined
 } from '@ant-design/icons';
 import apiClient from '../../services/apiClient';
-import { LatticeBackground, GlassCard } from '../../components/publiccomponents/DesignSystem';
+import { LatticeBackground } from '../../components/publiccomponents/DesignSystem';
 
 const ParticipantDetail = () => {
   const { id } = useParams();
