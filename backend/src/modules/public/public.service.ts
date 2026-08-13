@@ -426,7 +426,11 @@ export class PublicService {
   }
 
   async getStudentById(id: string): Promise<Student> {
-    const student = await this.studentModel.findById(id).populate('group').exec();
+    const student = await this.studentModel
+      .findById(id)
+      .populate('group')
+      .populate('programs.competition')
+      .exec();
     if (!student) throw new NotFoundException('Student not found');
     return student;
   }

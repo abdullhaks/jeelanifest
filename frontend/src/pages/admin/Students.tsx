@@ -552,6 +552,9 @@ const Students = () => {
                     {selectedStudent.programs.map((p: any, idx: number) => {
                       const compName = p.competition?.name || 'Unknown Competition';
                       const catStr = p.competition?.category ? `(${p.competition.category.toUpperCase()})` : '';
+                      const dateStr = p.competition?.date;
+                      const timeStr = p.competition?.time;
+                      const stageStr = p.competition?.stage ? (p.competition.stage === 'stage1' ? 'Stage 1' : p.competition.stage === 'stage2' ? 'Stage 2' : 'Off Stage') : null;
                       const rank = p.rankAwarded;
                       return (
                         <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between hover:bg-slate-100/80 transition-colors">
@@ -559,8 +562,20 @@ const Students = () => {
                             <div className="font-bold text-xs text-slate-900 font-display">
                               {compName} <span className="text-slate-400 font-normal text-[11px] ml-1">{catStr}</span>
                             </div>
-                            <div className="text-[10px] text-slate-500 mt-0.5">
-                              {p.competition?.type ? `Type: ${p.competition.type}` : 'Individual Event'}
+                            <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500 mt-1">
+                              <span className="font-medium text-slate-600">
+                                {p.competition?.type ? `Type: ${p.competition.type}` : 'Individual Event'}
+                              </span>
+                              {(dateStr || timeStr) && (
+                                <span className="inline-flex items-center gap-1 font-semibold text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-100">
+                                  📅 {dateStr || 'Date TBD'} {timeStr ? `⏰ ${timeStr}` : ''}
+                                </span>
+                              )}
+                              {stageStr && (
+                                <span className="inline-flex items-center gap-1 font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
+                                  📍 {stageStr}
+                                </span>
+                              )}
                             </div>
                           </div>
                           {rank ? (

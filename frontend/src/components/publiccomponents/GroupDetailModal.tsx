@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Spin, Avatar, Tag } from 'antd';
 import { TrophyOutlined, FireOutlined, UnorderedListOutlined, UserOutlined } from '@ant-design/icons';
@@ -11,6 +12,7 @@ interface GroupDetailModalProps {
 }
 
 export const GroupDetailModal: React.FC<GroupDetailModalProps> = ({ groupId, open, onClose }) => {
+  const navigate = useNavigate();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'breakdown' | 'topScorers' | 'members'>('breakdown');
@@ -244,7 +246,11 @@ export const GroupDetailModal: React.FC<GroupDetailModalProps> = ({ groupId, ope
                     {topScorers.map((st: any, idx: number) => (
                       <div
                         key={st._id || idx}
-                        className="flex justify-between items-center p-3.5 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-all"
+                        className="flex justify-between items-center p-3.5 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-300 hover:bg-slate-100/80 transition-all cursor-pointer"
+                        onClick={() => {
+                          onClose();
+                          navigate(`/participants/${st._id}`);
+                        }}
                       >
                         <div className="flex items-center gap-3">
                           <Avatar
@@ -288,7 +294,11 @@ export const GroupDetailModal: React.FC<GroupDetailModalProps> = ({ groupId, ope
                     {members.map((member: any) => (
                       <div
                         key={member._id}
-                        className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between hover:bg-slate-100/80 transition-colors"
+                        className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between hover:bg-slate-100/80 hover:border-slate-300 transition-colors cursor-pointer"
+                        onClick={() => {
+                          onClose();
+                          navigate(`/participants/${member._id}`);
+                        }}
                       >
                         <div className="flex items-center gap-3 overflow-hidden">
                           {member.profileImage ? (
