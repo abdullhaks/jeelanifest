@@ -79,7 +79,7 @@ export class CompetitionsService implements OnModuleInit {
     }
   }
 
-  async findAll(query: PaginationQuery): Promise<PaginatedResult<Competition>> {
+  async findAll(query: PaginationQuery): Promise<PaginatedResult<any>> {
     const filters: any = {};
 
     // Map custom filters from the query to Mongoose query
@@ -95,20 +95,60 @@ export class CompetitionsService implements OnModuleInit {
       }
     }
 
-    return paginate<CompetitionDocument>(
+    const result = await paginate<CompetitionDocument>(
       this.competitionModel,
       query,
       ['name'], // searchable fields
       filters
     );
+
+    const compIds = result.data.map((c) => c._id);
+    const studentCounts = await this.studentModel.aggregate([
+      { $match: { 'programs.competition': { $in: compIds } } },
+      { $unwind: '$programs' },
+      { $match: { 'programs.competition': { $in: compIds } } },
+      { $group: { _id: '$programs.competition', count: { $sum: 1 } } }
+    ]);
+
+    const countMap = new Map<string, number>();
+    studentCounts.forEach((sc) => countMap.set(sc._id.toString(), sc.count));
+
+    const enrichedData = result.data.map((comp) => {
+      const compObj = comp.toObject ? comp.toObject() : comp;
+      const entriesCount =
+        comp.type === 'group'
+          ? comp.groupEntries?.length || 0
+          : countMap.get(comp._id.toString()) || 0;
+      return {
+        ...compObj,
+        entriesCount,
+      };
+    });
+
+    return {
+      ...result,
+      data: enrichedData as any,
+    };
   }
 
-  async findOne(id: string): Promise<Competition> {
+  async findOne(id: string): Promise<any> {
     const competition = await this.competitionModel.findById(id).exec();
     if (!competition) {
       throw new NotFoundException(`Competition with ID ${id} not found`);
     }
-    return competition;
+    const compObj = competition.toObject();
+    let entriesCount = 0;
+    if (competition.type === 'group') {
+      entriesCount = competition.groupEntries?.length || 0;
+    } else {
+      entriesCount = await this.studentModel.countDocuments({
+        'programs.competition': id,
+      });
+    }
+    return {
+      ...compObj,
+      entriesCount,
+    };
   }
 
   async update(id: string, updateDto: UpdateCompetitionDto): Promise<Competition> {

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { 
   Table, Button, Input, Select, Space, Modal, Drawer, 
-  Form, Checkbox, Radio, Dropdown, message, Tag, Typography, Row, Col
+  Form, Checkbox, Radio, Dropdown, message, Tag, Typography, Row, Col, Spin, Avatar
 } from 'antd';
 import { 
   SearchOutlined, PlusOutlined, EditOutlined, 
-  DeleteOutlined, ExclamationCircleOutlined, EyeOutlined 
+  DeleteOutlined, ExclamationCircleOutlined, EyeOutlined, UserOutlined
 } from '@ant-design/icons';
 import { z } from 'zod';
 import apiClient from '../../services/apiClient';
@@ -42,6 +42,8 @@ const Competitions = () => {
   // Detail Modal State
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedComp, setSelectedComp] = useState<any>(null);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
+  const [participantsData, setParticipantsData] = useState<any[]>([]);
 
   // Drawer state
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -235,7 +237,7 @@ const Competitions = () => {
     {
       title: 'Entries',
       render: (_: any, record: any) => {
-        const count = record.groupEntries?.length || 0;
+        const count = record.entriesCount ?? (record.type === 'group' ? (record.groupEntries?.length || 0) : 0);
         return (
           <Tag 
             color={count > 0 ? "blue" : "default"} 
@@ -305,9 +307,20 @@ const Competitions = () => {
     },
   ];
 
-  const openDetailModal = (record: any) => {
+  const openDetailModal = async (record: any) => {
     setSelectedComp(record);
     setDetailModalVisible(true);
+    setParticipantsLoading(true);
+    setParticipantsData([]);
+    try {
+      const res = await apiClient.get(`/results/participants/${record._id}`);
+      setParticipantsData(res.data.data || []);
+    } catch (e) {
+      console.error(e);
+      setParticipantsData([]);
+    } finally {
+      setParticipantsLoading(false);
+    }
   };
 
   return (
@@ -534,37 +547,77 @@ const Competitions = () => {
               </div>
               <div>
                 <Text type="secondary" className="text-xs uppercase font-bold block">Total Entries</Text>
-                <Text className="font-bold text-sm">{selectedComp.groupEntries?.length || 0} Registered Groups</Text>
+                <Text className="font-bold text-sm">
+                  {selectedComp.type === 'group'
+                    ? `${selectedComp.entriesCount ?? (selectedComp.groupEntries?.length || 0)} Registered Groups`
+                    : `${selectedComp.entriesCount ?? participantsData.length} Registered Students`}
+                </Text>
               </div>
             </div>
 
-            <div>
-              <Title level={5} className="!mt-4 !mb-2">Registered Group & Chest Code Entries</Title>
-              {selectedComp.groupEntries && selectedComp.groupEntries.length > 0 ? (
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                  {selectedComp.groupEntries.map((entry: any, i: number) => {
-                    const groupId = typeof entry.group === 'object' ? entry.group._id : entry.group;
-                    const groupObj = groups.find(g => g._id === groupId);
-                    const groupName = groupObj ? groupObj.name : (typeof entry.group === 'object' ? entry.group.name : 'Unknown Group');
-                    return (
+            {selectedComp.type === 'group' ? (
+              <div>
+                <Title level={5} className="!mt-4 !mb-2">Registered Group & Chest Code Entries</Title>
+                {selectedComp.groupEntries && selectedComp.groupEntries.length > 0 ? (
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {selectedComp.groupEntries.map((entry: any, i: number) => {
+                      const groupId = typeof entry.group === 'object' ? entry.group._id : entry.group;
+                      const groupObj = groups.find(g => g._id === groupId);
+                      const groupName = groupObj ? groupObj.name : (typeof entry.group === 'object' ? entry.group.name : 'Unknown Group');
+                      return (
+                        <div key={i} className="p-3 bg-white border border-gray-200 rounded-lg flex items-center justify-between">
+                          <div>
+                            <div className="font-bold text-slate-800">{groupName}</div>
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              Chest Codes: {entry.chestCodes?.length ? entry.chestCodes.join(', ') : 'None'}
+                            </div>
+                          </div>
+                          <Tag color="blue">{entry.chestCodes?.length || 0} Codes</Tag>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="py-6 text-center text-gray-400 bg-gray-50 rounded-lg">
+                    No group entries registered for this competition.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                <Title level={5} className="!mt-4 !mb-2">Registered Student Participants</Title>
+                {participantsLoading ? (
+                  <div className="py-6 text-center">
+                    <Spin size="small" />
+                  </div>
+                ) : participantsData && participantsData.length > 0 ? (
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {participantsData.map((student: any, i: number) => (
                       <div key={i} className="p-3 bg-white border border-gray-200 rounded-lg flex items-center justify-between">
-                        <div>
-                          <div className="font-bold text-slate-800">{groupName}</div>
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            Chest Codes: {entry.chestCodes?.length ? entry.chestCodes.join(', ') : 'None'}
+                        <div className="flex items-center gap-3">
+                          <Avatar src={student.profileImage} icon={<UserOutlined />}>
+                            {student.name?.[0]}
+                          </Avatar>
+                          <div>
+                            <div className="font-bold text-slate-800">{student.name}</div>
+                            <div className="text-xs text-gray-500">
+                              Class: {student.class} | Category: {student.category}
+                            </div>
                           </div>
                         </div>
-                        <Tag color="blue">{entry.chestCodes?.length || 0} Codes</Tag>
+                        {student.group && (
+                          <Tag color="geekblue">{typeof student.group === 'object' ? student.group.name : 'Group'}</Tag>
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="py-6 text-center text-gray-400 bg-gray-50 rounded-lg">
-                  No group entries registered for this competition.
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-6 text-center text-gray-400 bg-gray-50 rounded-lg">
+                    No students registered for this competition yet.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </Modal>
