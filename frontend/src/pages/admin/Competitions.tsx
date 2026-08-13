@@ -79,6 +79,7 @@ const Competitions = () => {
       });
 
       const response = await apiClient.get(`/competitions?${params}`);
+      console.log('response data is',response)
       setData(response.data.data);
       setTotal(response.data.meta.total);
     } catch (error) {
@@ -314,6 +315,7 @@ const Competitions = () => {
     setParticipantsData([]);
     try {
       const res = await apiClient.get(`/results/participants/${record._id}`);
+      console.log('res data is ',res.data)
       setParticipantsData(res.data.data || []);
     } catch (e) {
       console.error(e);
@@ -599,9 +601,16 @@ const Competitions = () => {
                             {student.name?.[0]}
                           </Avatar>
                           <div>
-                            <div className="font-bold text-slate-800">{student.name}</div>
-                            <div className="text-xs text-gray-500">
-                              Class: {student.class} | Category: {student.category}
+                            <div className="font-bold text-slate-800 flex items-center gap-2">
+                              <span>{student.name}</span>
+                              {student.chestNo && (
+                                <Tag color="orange" className="!mr-0 font-mono text-xs font-bold">
+                                  #{student.chestNo}
+                                </Tag>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              Chest No: <span className="font-semibold text-slate-700">{student.chestNo || 'N/A'}</span> | Class: {student.class} | Category: {student.category}
                             </div>
                           </div>
                         </div>

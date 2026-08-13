@@ -96,7 +96,7 @@ export class ResultsService implements OnModuleInit {
       const query: any = { 'programs.competition': comp._id };
 
       const students = await this.studentModel
-        .find(query, 'name class category profileImage group')
+        .find(query, 'name chestNo class category profileImage group')
         .populate('group', 'name')
         .exec();
         
