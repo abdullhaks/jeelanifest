@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, Col, Row, Statistic, Skeleton, List, Typography, Badge, Space } from 'antd';
-import { TrophyOutlined, TeamOutlined, UserOutlined, FlagOutlined } from '@ant-design/icons';
+import { TrophyOutlined, TeamOutlined, UserOutlined, FlagOutlined, EyeOutlined } from '@ant-design/icons';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import apiClient from '../../services/apiClient';
 
@@ -44,49 +44,49 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} className="shadow-sm rounded-xl">
-            <Statistic
-              title="Total Competitions"
-              value={kpis?.totalCompetitions || 0}
-              prefix={<TrophyOutlined className="text-amber-500" />}
-              valueStyle={{ fontWeight: 600, fontFamily: 'var(--font-display)' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} className="shadow-sm rounded-xl">
-            <Statistic
-              title="Active Groups"
-              value={kpis?.totalGroups || 0}
-              prefix={<TeamOutlined className="text-teal-500" />}
-              valueStyle={{ fontWeight: 600, fontFamily: 'var(--font-display)' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} className="shadow-sm rounded-xl">
-            <Statistic
-              title="Total Students"
-              value={kpis?.totalStudents || 0}
-              prefix={<UserOutlined className="text-blue-500" />}
-              valueStyle={{ fontWeight: 600, fontFamily: 'var(--font-display)' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false} className="shadow-sm rounded-xl">
-            <Statistic
-              title="Results Published"
-              value={kpis?.resultsPublished || 0}
-              suffix={`/ ${kpis?.totalCompetitions || 0}`}
-              prefix={<FlagOutlined className="text-rose-500" />}
-              valueStyle={{ fontWeight: 600, fontFamily: 'var(--font-display)' }}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <Card bordered={false} className="shadow-sm rounded-xl hover:shadow-md transition-shadow">
+          <Statistic
+            title="Total Competitions"
+            value={kpis?.totalCompetitions || 0}
+            prefix={<TrophyOutlined className="text-amber-500" />}
+            valueStyle={{ fontWeight: 600, fontFamily: 'var(--font-display)' }}
+          />
+        </Card>
+        <Card bordered={false} className="shadow-sm rounded-xl hover:shadow-md transition-shadow">
+          <Statistic
+            title="Active Groups"
+            value={kpis?.totalGroups || 0}
+            prefix={<TeamOutlined className="text-teal-500" />}
+            valueStyle={{ fontWeight: 600, fontFamily: 'var(--font-display)' }}
+          />
+        </Card>
+        <Card bordered={false} className="shadow-sm rounded-xl hover:shadow-md transition-shadow">
+          <Statistic
+            title="Total Students"
+            value={kpis?.totalStudents || 0}
+            prefix={<UserOutlined className="text-blue-500" />}
+            valueStyle={{ fontWeight: 600, fontFamily: 'var(--font-display)' }}
+          />
+        </Card>
+        <Card bordered={false} className="shadow-sm rounded-xl hover:shadow-md transition-shadow">
+          <Statistic
+            title="Results Published"
+            value={kpis?.resultsPublished || 0}
+            suffix={`/ ${kpis?.totalCompetitions || 0}`}
+            prefix={<FlagOutlined className="text-rose-500" />}
+            valueStyle={{ fontWeight: 600, fontFamily: 'var(--font-display)' }}
+          />
+        </Card>
+        <Card bordered={false} className="shadow-sm rounded-xl hover:shadow-md transition-shadow bg-gradient-to-br from-white to-purple-50/40 border border-purple-100/50">
+          <Statistic
+            title="Total Visitors"
+            value={kpis?.totalVisitors ?? 0}
+            prefix={<EyeOutlined className="text-purple-600" />}
+            valueStyle={{ fontWeight: 700, fontFamily: 'var(--font-display)', color: '#6B21A8' }}
+          />
+        </Card>
+      </div>
 
       <Row gutter={[16, 16]} className="mt-4">
         <Col xs={24} lg={16}>

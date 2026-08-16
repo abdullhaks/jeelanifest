@@ -5,6 +5,7 @@ import { Student, StudentDocument } from '../students/student.schema';
 import { Group, GroupDocument } from '../groups/group.schema';
 import { Competition, CompetitionDocument } from '../competitions/competition.schema';
 import { Result, ResultDocument } from '../results/result.schema';
+import { VisitorsService } from '../visitors/visitors.service';
 
 @Injectable()
 export class DashboardService {
@@ -13,6 +14,7 @@ export class DashboardService {
     @InjectModel(Group.name) private groupModel: Model<GroupDocument>,
     @InjectModel(Competition.name) private competitionModel: Model<CompetitionDocument>,
     @InjectModel(Result.name) private resultModel: Model<ResultDocument>,
+    private readonly visitorsService: VisitorsService,
   ) {}
 
   async getStats() {
@@ -20,6 +22,7 @@ export class DashboardService {
     const totalGroups = await this.groupModel.countDocuments({ isDeleted: false });
     const totalCompetitions = await this.competitionModel.countDocuments();
     const resultsPublished = await this.resultModel.countDocuments({ status: 'published' });
+    const totalVisitors = await this.visitorsService.getCount();
 
     // For Group Point Race
     const groups = await this.groupModel.find({ isDeleted: false }, 'name totalPoints').sort({ totalPoints: -1 }).exec();
@@ -38,6 +41,7 @@ export class DashboardService {
         totalGroups,
         totalCompetitions,
         resultsPublished,
+        totalVisitors,
       },
       groups: groups.map(g => ({ name: g.name, points: g.totalPoints })),
       studentCategories: [

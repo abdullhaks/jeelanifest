@@ -10,8 +10,12 @@ import {
   CalendarOutlined, 
   ClockCircleOutlined, 
   EnvironmentOutlined,
-  CheckOutlined
+  CheckOutlined,
+  RightOutlined,
+  PictureOutlined,
+  TrophyFilled
 } from '@ant-design/icons';
+import { motion } from 'framer-motion';
 import apiClient from '../../services/apiClient';
 import { LatticeBackground } from '../../components/publiccomponents/DesignSystem';
 
@@ -235,6 +239,109 @@ const ParticipantDetail = () => {
                 const timeStr = comp.time;
                 const stageStr = comp.stage ? (comp.stage === 'stage1' ? 'Stage 1' : comp.stage === 'stage2' ? 'Stage 2' : 'Off Stage') : null;
                 const rank = p.rankAwarded;
+                const isWinner = Boolean(p.hasWon || (rank && ['1st', '2nd', '3rd'].includes(rank)));
+                const targetResultId = p.resultId || comp._id;
+
+                if (isWinner) {
+                  return (
+                    <motion.div
+                      key={idx}
+                      whileHover={{ scale: 1.012, y: -2 }}
+                      whileTap={{ scale: 0.988 }}
+                      onClick={() => {
+                        if (targetResultId) {
+                          navigate(`/results/${targetResultId}`);
+                        }
+                      }}
+                      className={`cursor-pointer transition-all p-5 sm:p-6 rounded-2xl relative overflow-hidden group shadow-md ${
+                        rank === '1st'
+                          ? 'bg-gradient-to-r from-amber-500/10 via-amber-50/60 to-white border-2 border-amber-400 hover:border-amber-500 hover:shadow-xl hover:shadow-amber-500/20'
+                          : rank === '2nd'
+                          ? 'bg-gradient-to-r from-slate-400/10 via-slate-100/70 to-white border-2 border-slate-300 hover:border-slate-400 hover:shadow-xl hover:shadow-slate-400/20'
+                          : 'bg-gradient-to-r from-amber-700/10 via-orange-50/60 to-white border-2 border-amber-600/40 hover:border-amber-600 hover:shadow-xl hover:shadow-orange-500/20'
+                      } flex flex-col sm:flex-row sm:items-center justify-between gap-4`}
+                    >
+                      {/* Decorative Ribbon / Glow bar */}
+                      <div
+                        className={`absolute top-0 left-0 bottom-0 w-2 ${
+                          rank === '1st'
+                            ? 'bg-gradient-to-b from-amber-400 to-yellow-500'
+                            : rank === '2nd'
+                            ? 'bg-gradient-to-b from-slate-300 to-slate-500'
+                            : 'bg-gradient-to-b from-orange-400 to-amber-700'
+                        }`}
+                      />
+
+                      {/* Left details */}
+                      <div className="space-y-2 pl-2 sm:pl-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-black text-lg text-slate-900 font-display group-hover:text-amber-600 transition-colors">
+                            {compName}
+                          </span>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-slate-200 text-slate-700 uppercase">
+                            {catStr}
+                          </span>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                            {typeStr}
+                          </span>
+                          {p.pointsAwarded ? (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              +{p.pointsAwarded} PTS
+                            </span>
+                          ) : null}
+                        </div>
+
+                        {/* Date & Time badges */}
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-slate-600">
+                          <span className="flex items-center gap-1.5 font-bold bg-white/90 shadow-sm border border-slate-200 px-3 py-1 rounded-xl">
+                            <CalendarOutlined className="text-amber-500" />
+                            {dateStr ? dateStr : 'Fest Schedule'}
+                          </span>
+
+                          <span className="flex items-center gap-1.5 font-bold bg-white/90 shadow-sm border border-slate-200 px-3 py-1 rounded-xl">
+                            <ClockCircleOutlined className="text-emerald-500" />
+                            {timeStr ? timeStr : 'Completed'}
+                          </span>
+
+                          {stageStr && (
+                            <span className="flex items-center gap-1.5 font-bold bg-white/90 shadow-sm border border-slate-200 px-3 py-1 rounded-xl">
+                              <EnvironmentOutlined className="text-purple-500" />
+                              {stageStr}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right award status & Clickable Action */}
+                      <div className="shrink-0 flex flex-wrap sm:flex-col items-start sm:items-end justify-between gap-2.5 pl-2 sm:pl-0 mt-2 sm:mt-0">
+                        {/* 1st / 2nd / 3rd badge */}
+                        <span
+                          className={`px-4 py-1.5 rounded-full text-xs font-black tracking-wide border shadow-sm flex items-center gap-1.5 ${
+                            rank === '1st'
+                              ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 border-amber-300 shadow-amber-500/20'
+                              : rank === '2nd'
+                              ? 'bg-gradient-to-r from-slate-200 to-slate-300 text-slate-900 border-slate-400 shadow-slate-300/30'
+                              : 'bg-gradient-to-r from-orange-400 to-amber-600 text-white border-orange-500 shadow-orange-500/20'
+                          }`}
+                        >
+                          <TrophyFilled />
+                          {rank === '1st'
+                            ? '🥇 1st Place Winner'
+                            : rank === '2nd'
+                            ? '🥈 2nd Place Winner'
+                            : '🥉 3rd Place Winner'}
+                        </span>
+
+                        {/* Direct Poster Download CTA Button */}
+                        <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 text-white group-hover:bg-amber-500 group-hover:text-slate-950 font-bold text-xs transition-all shadow-sm">
+                          <PictureOutlined className="text-sm" />
+                          <span>View Result & Download Poster</span>
+                          <RightOutlined className="text-[10px] transition-transform group-hover:translate-x-0.5" />
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                }
 
                 return (
                   <div
@@ -276,21 +383,11 @@ const ParticipantDetail = () => {
                       </div>
                     </div>
 
-                    {/* Right award status */}
+                    {/* Right status */}
                     <div className="shrink-0 mt-2 sm:mt-0">
-                      {rank ? (
-                        <span className={`px-3.5 py-1.5 rounded-full text-xs font-black tracking-wide border shadow-sm inline-block ${
-                          rank === '1st' ? 'bg-amber-100 text-amber-800 border-amber-300' :
-                          rank === '2nd' ? 'bg-slate-100 text-slate-700 border-slate-300' :
-                          'bg-orange-100 text-orange-800 border-orange-300'
-                        }`}>
-                          {rank === '1st' ? '🥇 1st Place Winner' : rank === '2nd' ? '🥈 2nd Place Winner' : '🥉 3rd Place Winner'}
-                        </span>
-                      ) : (
-                        <span className="px-3 py-1.5 rounded-full text-xs font-bold text-slate-500 bg-slate-100 border border-slate-200 shadow-sm">
-                          Confirmed Enrolled
-                        </span>
-                      )}
+                      <span className="px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-500 bg-slate-100 border border-slate-200 shadow-sm">
+                        Confirmed Enrolled
+                      </span>
                     </div>
                   </div>
                 );

@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Group, GroupDocument } from '../groups/group.schema';
 import { Student, StudentDocument } from '../students/student.schema';
 import { Competition, CompetitionDocument } from '../competitions/competition.schema';
@@ -8,8 +8,6 @@ import { Result, ResultDocument } from '../results/result.schema';
 import { FinalResult, FinalResultDocument } from '../results/final-result.schema';
 import { PaginationQuery } from '../common/pagination.schema';
 import { paginate, PaginatedResult } from '../common/paginate.helper';
-import { NotFoundException } from '@nestjs/common';
-
 import { GalleryImage, GalleryImageDocument } from '../gallery/gallery.schema';
 
 @Injectable()
@@ -251,8 +249,16 @@ export class PublicService {
   }
 
   async getResultById(id: string): Promise<Result> {
+    const isObjectId = Types.ObjectId.isValid(id);
+    const query: any = isObjectId
+      ? {
+          $or: [{ _id: new Types.ObjectId(id) }, { competition: new Types.ObjectId(id) }],
+          status: 'published',
+        }
+      : { status: 'published' };
+
     const result = await this.resultModel
-      .findOne({ _id: id, status: 'published' })
+      .findOne(query)
       .populate('competition')
       .populate({
         path: 'winners.participant',
@@ -425,13 +431,85 @@ export class PublicService {
     );
   }
 
-  async getStudentById(id: string): Promise<Student> {
+  async getStudentById(id: string): Promise<any> {
     const student = await this.studentModel
       .findById(id)
       .populate('group')
       .populate('programs.competition')
+      .lean()
       .exec();
     if (!student) throw new NotFoundException('Student not found');
-    return student;
+
+    const publishedResults = await this.resultModel
+      .find({ status: 'published' })
+      .populate('competition')
+      .lean()
+      .exec();
+
+    const compResultMap = new Map<string, any>();
+    const studentIdStr = student._id.toString();
+    const groupIdStr = student.group?._id
+      ? student.group._id.toString()
+      : (student.group ? student.group.toString() : null);
+
+    for (const res of publishedResults) {
+      if (res.competition?._id) {
+        compResultMap.set(res.competition._id.toString(), res);
+      } else if (res.competition) {
+        compResultMap.set(res.competition.toString(), res);
+      }
+    }
+
+    const enrichedPrograms = (student.programs || []).map((p: any) => {
+      const compId = p.competition?._id
+        ? p.competition._id.toString()
+        : (p.competition ? p.competition.toString() : null);
+
+      const res = compId ? compResultMap.get(compId) : null;
+      let rank = p.rankAwarded || null;
+      let pointsAwarded = p.pointsAwarded || 0;
+      const resultId = res ? res._id.toString() : null;
+
+      if (res && res.winners) {
+        // Match student winner
+        const studentWinner = res.winners.find((w: any) => {
+          const partId = w.participant?._id
+            ? w.participant._id.toString()
+            : (w.participant ? w.participant.toString() : null);
+          return partId === studentIdStr;
+        });
+
+        // Match group winner if group event
+        const groupWinner =
+          !studentWinner && groupIdStr && p.competition?.type === 'group'
+            ? res.winners.find((w: any) => {
+                const partId = w.participant?._id
+                  ? w.participant._id.toString()
+                  : (w.participant ? w.participant.toString() : null);
+                return partId === groupIdStr;
+              })
+            : null;
+
+        const winnerMatch = studentWinner || groupWinner;
+
+        if (winnerMatch) {
+          rank = winnerMatch.rank || rank;
+          pointsAwarded = winnerMatch.pointsAwarded || pointsAwarded;
+        }
+      }
+
+      return {
+        ...p,
+        rankAwarded: rank,
+        pointsAwarded,
+        resultId,
+        hasWon: Boolean(rank && ['1st', '2nd', '3rd'].includes(rank)),
+      };
+    });
+
+    return {
+      ...student,
+      programs: enrichedPrograms,
+    };
   }
 }

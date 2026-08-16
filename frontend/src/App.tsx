@@ -8,6 +8,11 @@ import { RealtimeProvider } from './components/publiccomponents/RealtimeProvider
 
 function App() {
   useEffect(() => {
+    // Record visitor hit on project initialization
+    apiClient.post('/public/visitors/hit').catch((err) => {
+      console.warn('Visitor counter log skipped/failed:', err?.message);
+    });
+
     // Initial health check call
     apiClient
       .get('/health')

@@ -14,6 +14,7 @@ import { PostersModule } from './modules/posters/posters.module';
 import { GalleryModule } from './modules/gallery/gallery.module';
 import { PublicModule } from './modules/public/public.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { VisitorsModule } from './modules/visitors/visitors.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     GalleryModule,
     PublicModule,
     DashboardModule,
+    VisitorsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

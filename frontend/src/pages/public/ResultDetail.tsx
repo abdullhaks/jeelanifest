@@ -25,6 +25,10 @@ const ResultDetail = () => {
       try {
         const res = await apiClient.get(`/public/results/${id}`);
         setResult(res.data);
+        // Normalize URL to the canonical Result ID if reached via competition ID
+        if (res.data?._id && res.data._id !== id) {
+          navigate(`/results/${res.data._id}`, { replace: true });
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -32,7 +36,7 @@ const ResultDetail = () => {
       }
     };
     if (id) fetchResult();
-  }, [id]);
+  }, [id, navigate]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA]">

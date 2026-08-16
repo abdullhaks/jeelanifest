@@ -8,6 +8,8 @@ import { Competition, CompetitionSchema } from '../competitions/competition.sche
 import { Result, ResultSchema } from '../results/result.schema';
 import { AuthModule } from '../auth/auth.module'; // for AuthGuard
 
+import { VisitorsModule } from '../visitors/visitors.module';
+
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -17,6 +19,7 @@ import { AuthModule } from '../auth/auth.module'; // for AuthGuard
       { name: Result.name, schema: ResultSchema },
     ]),
     AuthModule,
+    VisitorsModule,
   ],
   controllers: [DashboardController],
   providers: [DashboardService],
