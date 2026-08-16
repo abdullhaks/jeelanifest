@@ -216,7 +216,7 @@ const ResultDetail = () => {
                 transition={{ delay: index * 0.08 }}
               >
                 <GlassCard className={`p-6 flex flex-col md:flex-row items-center justify-between gap-6 rounded-3xl ${cardStyling}`} hover={false}>
-                  <div className="flex items-center gap-5 text-center md:text-left">
+                  <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left w-full sm:w-auto">
                     {/* Rank Badge / Student Photo Avatar */}
                     <div className="relative shrink-0">
                       {studentPhoto ? (
@@ -238,7 +238,7 @@ const ResultDetail = () => {
                       <div className="text-xs font-black uppercase tracking-wider mb-1 text-slate-500">
                         {positionTitle}
                       </div>
-                      <div className="font-extrabold text-xl md:text-2xl text-slate-900" style={{ fontFamily: 'var(--font-display)' }}>
+                      <div className="font-extrabold text-xl md:text-2xl text-slate-900 break-words w-full" style={{ fontFamily: 'var(--font-display)' }}>
                         {participantName}
                       </div>
                       {chestNo !== 'N/A' && (
@@ -250,7 +250,7 @@ const ResultDetail = () => {
                   </div>
 
                   {/* Right Side: Group Emblem, Points & Poster Action */}
-                  <div className="flex flex-wrap items-center gap-4 text-center md:text-right justify-center md:justify-end">
+                  <div className="flex flex-col sm:flex-row flex-wrap items-center gap-4 text-center justify-center md:justify-end w-full md:w-auto">
                     {/* Group Emblem Badge */}
                     <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-2xl border border-slate-200 shadow-sm">
                       {groupLogo ? (
@@ -264,7 +264,7 @@ const ResultDetail = () => {
                           {groupName.charAt(0)}
                         </Avatar>
                       )}
-                      <div className="font-extrabold text-sm text-slate-800">{groupName}</div>
+                      <div className="font-extrabold text-sm text-slate-800 break-words max-w-[120px] text-left">{groupName}</div>
                     </div>
 
                     <div>

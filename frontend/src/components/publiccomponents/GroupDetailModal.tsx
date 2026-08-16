@@ -139,6 +139,19 @@ export const GroupDetailModal: React.FC<GroupDetailModalProps> = ({ groupId, ope
                     <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
                       Competing in Jeelani Fest 2026 Championship
                     </p>
+                    {group.leaders && group.leaders.length > 0 && (
+                      <div className="mt-3 flex flex-wrap items-center justify-center md:justify-start gap-2">
+                        {group.leaders.map((leader: any, idx: number) => (
+                          <div key={leader._id} className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full shadow-sm">
+                            <Avatar src={leader.profileImage} size={20} style={{ backgroundColor: '#FFFFFF', color: '#0284C7', border: '1px solid #E2E8F0' }}>
+                              {leader.name?.charAt(0) || 'L'}
+                            </Avatar>
+                            <span className="text-[10px] font-bold text-slate-700">{leader.name}</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase">({idx === 0 ? 'Leader' : 'Asst'})</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="text-center md:text-right bg-gradient-to-br from-sky-50 to-emerald-50 px-5 py-3 rounded-2xl border border-sky-100 shrink-0 shadow-sm">
                     <div className="font-mono text-2xl sm:text-3xl font-extrabold text-sky-600">
@@ -201,7 +214,7 @@ export const GroupDetailModal: React.FC<GroupDetailModalProps> = ({ groupId, ope
                           <Avatar
                             src={item.participantPhoto}
                             size={40}
-                            style={{ border: '2px solid #E2E8F0', backgroundColor: '#0284C7' }}
+                            style={{ border: '2px solid #E2E8F0', backgroundColor: '#FFFFFF', color: '#0284C7' }}
                           >
                             {item.participantName?.charAt(0) || 'G'}
                           </Avatar>
@@ -257,8 +270,8 @@ export const GroupDetailModal: React.FC<GroupDetailModalProps> = ({ groupId, ope
                             src={st.profileImage}
                             size={40}
                             style={{
-                              backgroundColor: idx === 0 ? '#FEF3C7' : idx === 1 ? '#F1F5F9' : '#E0F2FE',
-                              color: idx === 0 ? '#D97706' : idx === 1 ? '#475569' : '#0284C7',
+                              backgroundColor: '#FFFFFF',
+                              color: '#0284C7',
                               fontWeight: 'bold',
                               border: '2px solid #E2E8F0',
                             }}
@@ -302,9 +315,9 @@ export const GroupDetailModal: React.FC<GroupDetailModalProps> = ({ groupId, ope
                       >
                         <div className="flex items-center gap-3 overflow-hidden">
                           {member.profileImage ? (
-                            <Avatar src={member.profileImage} size={36} className="border border-slate-200 shrink-0" />
+                            <Avatar src={member.profileImage} size={36} className="border border-slate-200 shrink-0" style={{ backgroundColor: '#FFFFFF' }} />
                           ) : (
-                            <Avatar size={36} className="bg-sky-600 text-white font-bold text-xs shrink-0">
+                            <Avatar size={36} className="bg-white text-sky-600 font-bold text-xs shrink-0" style={{ border: '1px solid #E2E8F0' }}>
                               {member.name ? member.name.charAt(0).toUpperCase() : 'S'}
                             </Avatar>
                           )}

@@ -1018,9 +1018,9 @@ const Home = () => {
               </button>
 
               <div className="flex items-center gap-5 mb-6 pb-6 border-b border-slate-100">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-sky-500 to-emerald-600 text-white font-extrabold text-2xl flex items-center justify-center shadow-md overflow-hidden shrink-0">
+                <div className={`w-16 h-16 rounded-full text-white font-extrabold text-2xl flex items-center justify-center shadow-md overflow-hidden shrink-0 ${selectedStudent.profileImage ? 'bg-white' : 'bg-gradient-to-tr from-sky-500 to-emerald-600'}`}>
                   {selectedStudent.profileImage ? (
-                    <img src={selectedStudent.profileImage} alt={selectedStudent.name} className="w-full h-full object-cover" />
+                    <img src={selectedStudent.profileImage} alt={selectedStudent.name} className="w-full h-full object-cover bg-white" />
                   ) : (
                     selectedStudent.name.charAt(0)
                   )}

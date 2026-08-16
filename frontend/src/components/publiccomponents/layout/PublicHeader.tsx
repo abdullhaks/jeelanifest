@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const navLinks = [
@@ -15,6 +15,7 @@ const PublicHeader: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 30);
@@ -43,9 +44,19 @@ const PublicHeader: React.FC = () => {
               : 'bg-white/80 backdrop-blur-lg border-slate-200/60 shadow-md'
           }`}
         >
-          {/* Logo */}
-          <Link to="/" className="group flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-600 to-sky-500 flex items-center justify-center text-white font-extrabold text-lg shadow-md group-hover:scale-105 transition-transform">
+          {/* Back & Logo */}
+          <div className="flex items-center gap-3">
+            {location.pathname !== '/' && (
+              <button 
+                onClick={() => navigate(-1)}
+                className="w-9 h-9 rounded-full bg-slate-100/80 hover:bg-slate-200 flex items-center justify-center text-slate-700 transition-colors border border-slate-200"
+                aria-label="Go Back"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              </button>
+            )}
+            <Link to="/" className="group flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-600 to-sky-500 flex items-center justify-center text-white font-extrabold text-lg shadow-md group-hover:scale-105 transition-transform">
               <img src="logo1.jpeg" alt="" className='w-full h-full object-cover rounded-full' />
             </div>
             <div className="flex flex-col">
@@ -59,7 +70,8 @@ const PublicHeader: React.FC = () => {
                 Sheikh Jeelani Islamic Academy
               </span>
             </div>
-          </Link>
+            </Link>
+          </div>
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex gap-1 items-center bg-slate-100/80 p-1.5 rounded-full border border-slate-200/80">

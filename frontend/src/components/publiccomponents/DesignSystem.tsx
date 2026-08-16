@@ -270,7 +270,7 @@ export const PodiumCard: React.FC<{
       </div>
 
       {/* Student Name */}
-      <div className="font-extrabold text-base md:text-lg text-slate-900 line-clamp-1 leading-snug mb-0.5 z-10" style={{ fontFamily: 'var(--font-display)' }}>
+      <div className="font-extrabold text-base md:text-lg text-slate-900 leading-snug mb-0.5 z-10 break-words max-w-full px-2" style={{ fontFamily: 'var(--font-display)' }}>
         {name}
       </div>
 
