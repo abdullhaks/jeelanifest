@@ -102,7 +102,7 @@ const coordinatorMembers = [
   },
   {
     id: 4,
-    name: 'AlShan Shad Jeelani. Manjery',
+    name: 'AlShan Shahad Jeelani. Manjery',
     role: 'JOINT CONVENOR JEELANI FEST 26',
     isChairman: false,
     photo: 'https://res.cloudinary.com/mqorn88v/image/upload/v1786116892/WhatsApp_Image_2026-08-07_at_8.43.06_PM_bevxlj.jpg',
