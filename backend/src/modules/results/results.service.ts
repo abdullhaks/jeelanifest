@@ -63,7 +63,12 @@ export class ResultsService implements OnModuleInit {
 
   async getResultByCompetition(competitionId: string): Promise<Result | null> {
     return this.resultModel.findOne({ competition: competitionId })
-      .populate({ path: 'winners.participant', select: 'name class group profileImage logoUrl', strictPopulate: false })
+      .populate({ 
+        path: 'winners.participant', 
+        select: 'name chestNo class category group profileImage logoUrl', 
+        populate: { path: 'group', select: 'name', strictPopulate: false },
+        strictPopulate: false 
+      })
       .exec();
   }
 
@@ -198,7 +203,12 @@ export class ResultsService implements OnModuleInit {
 
     const populatedResult = await this.resultModel.findById(id)
       .populate('competition', 'name type category stage status')
-      .populate({ path: 'winners.participant', select: 'name profileImage logoUrl class groupName', strictPopulate: false })
+      .populate({ 
+        path: 'winners.participant', 
+        select: 'name chestNo class category group profileImage logoUrl groupName', 
+        populate: { path: 'group', select: 'name', strictPopulate: false },
+        strictPopulate: false 
+      })
       .exec();
 
     this.socketGateway.emitEvent('result:published', populatedResult);
@@ -225,7 +235,12 @@ export class ResultsService implements OnModuleInit {
 
     const populatedResult = await this.resultModel.findById(id)
       .populate('competition', 'name type category stage status')
-      .populate({ path: 'winners.participant', select: 'name profileImage logoUrl class groupName', strictPopulate: false })
+      .populate({ 
+        path: 'winners.participant', 
+        select: 'name chestNo class category group profileImage logoUrl groupName', 
+        populate: { path: 'group', select: 'name', strictPopulate: false },
+        strictPopulate: false 
+      })
       .exec();
 
     this.socketGateway.emitEvent('result:published', populatedResult);
@@ -247,7 +262,12 @@ export class ResultsService implements OnModuleInit {
 
     const populatedResult = await this.resultModel.findById(id)
       .populate('competition', 'name type category stage status')
-      .populate({ path: 'winners.participant', select: 'name profileImage logoUrl class groupName', strictPopulate: false })
+      .populate({ 
+        path: 'winners.participant', 
+        select: 'name chestNo class category group profileImage logoUrl groupName', 
+        populate: { path: 'group', select: 'name', strictPopulate: false },
+        strictPopulate: false 
+      })
       .exec();
 
     this.socketGateway.emitEvent('result:withdrawn', populatedResult);

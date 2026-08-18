@@ -108,6 +108,7 @@ const Results = () => {
           rank: w.rank,
           participantType: w.participantType,
           participant: typeof w.participant === 'object' ? w.participant._id : w.participant,
+          participantData: typeof w.participant === 'object' ? w.participant : null,
           chestCode: w.chestCode,
           pointsAwarded: w.pointsAwarded
         })));
@@ -124,7 +125,9 @@ const Results = () => {
   const handleAddWinner = (rank: '1st'|'2nd'|'3rd', compositeId: string) => {
     const [participantId, chestCode] = compositeId.split('::');
     
-    if (winners.find(w => w.participant === participantId && w.rank === rank && (w.chestCode || '') === (chestCode || ''))) return; // already added
+    if (winners.find(w => (typeof w.participant === 'object' ? w.participant._id : w.participant) === participantId && w.rank === rank && (w.chestCode || '') === (chestCode || ''))) return; // already added
+
+    const pData = participants.find(p => p._id === participantId && (p.chestCode || '') === (chestCode || ''));
 
     // Provide default points based on rank
     const defaultPoints = rank === '1st' ? 10 : rank === '2nd' ? 5 : 3;
@@ -133,21 +136,36 @@ const Results = () => {
       rank,
       participantType: participantType,
       participant: participantId,
+      participantData: pData || null,
       chestCode: chestCode || undefined,
       pointsAwarded: defaultPoints
     }]);
   };
 
   const handleRemoveWinner = (participantId: string, rank: string, chestCode?: string) => {
-    setWinners(prev => prev.filter(w => !(w.participant === participantId && w.rank === rank && (w.chestCode || '') === (chestCode || ''))));
+    setWinners(prev => prev.filter(w => {
+      const pId = typeof w.participant === 'object' ? w.participant._id : w.participant;
+      return !(pId === participantId && w.rank === rank && (w.chestCode || '') === (chestCode || ''));
+    }));
   };
 
   const handleUpdatePoints = (participantId: string, rank: string, chestCode: string | undefined, points: number | null) => {
     setWinners(prev => prev.map(w => {
-      if (w.participant === participantId && w.rank === rank && (w.chestCode || '') === (chestCode || '')) {
+      const pId = typeof w.participant === 'object' ? w.participant._id : w.participant;
+      if (pId === participantId && w.rank === rank && (w.chestCode || '') === (chestCode || '')) {
         return { ...w, pointsAwarded: points || 0 };
       }
       return w;
+    }));
+  };
+
+  const sanitizeWinners = (winList: any[]) => {
+    return winList.map(w => ({
+      rank: w.rank,
+      participantType: w.participantType,
+      participant: typeof w.participant === 'object' ? w.participant._id : w.participant,
+      chestCode: w.chestCode || undefined,
+      pointsAwarded: w.pointsAwarded
     }));
   };
 
@@ -160,7 +178,7 @@ const Results = () => {
     try {
       await apiClient.post('/results', {
         competition: selectedCompId,
-        winners
+        winners: sanitizeWinners(winners)
       });
       message.success('Draft saved successfully!');
       await fetchCompetitionsAndResults();
@@ -213,7 +231,7 @@ const Results = () => {
         try {
           await apiClient.put(`/results/${resultId}`, {
             competition: selectedCompId,
-            winners
+            winners: sanitizeWinners(winners)
           });
           message.success('Published result updated successfully!');
           await fetchCompetitionsAndResults();
@@ -274,47 +292,164 @@ const Results = () => {
     });
   };
 
+  const getParticipantDetails = (w: any) => {
+    const pId = typeof w.participant === 'object' ? w.participant._id : w.participant;
+    const fromList = participants.find(p => p._id === pId && (p.chestCode || '') === (w.chestCode || ''));
+    const fromPopulated = typeof w.participant === 'object' ? w.participant : null;
+    const fromExtra = w.participantData;
+
+    const pData = fromList || fromPopulated || fromExtra;
+    const isStudent = (w.participantType || participantType) === 'Student';
+    const name = pData?.name || 'Unknown';
+    const chestNo = pData?.chestNo;
+    const groupName = pData?.group?.name || (typeof pData?.group === 'string' ? pData?.group : null) || pData?.groupName;
+    const chestCode = w.chestCode || pData?.chestCode;
+    const studentClass = pData?.class;
+
+    return {
+      id: pId,
+      name,
+      isStudent,
+      chestNo,
+      groupName,
+      chestCode,
+      studentClass
+    };
+  };
+
   const renderRankColumn = (rank: '1st'|'2nd'|'3rd', color: string, title: string) => {
     const rankWinners = winners.filter(w => w.rank === rank);
     
     return (
-      <Card title={title} bordered={false} style={{ background: color, minHeight: 300 }}>
+      <Card title={title} bordered={false} style={{ background: color, minHeight: 320 }} className="rounded-xl shadow-sm">
         <Select 
-          placeholder={`Add ${rank} Place`}
+          placeholder={`Add ${rank} Place Winner`}
           style={{ width: '100%', marginBottom: 16 }}
-          onChange={(val) => { if(val) handleAddWinner(rank, val); }}
+          onChange={(val) => { if (val) handleAddWinner(rank, val); }}
           value={null}
-          showSearch={false}
+          showSearch={true}
+          filterOption={(input, option) => {
+            const searchStr = ((option as any)?.['data-search'] || '').toLowerCase();
+            return searchStr.includes(input.toLowerCase());
+          }}
+          optionLabelProp="label"
         >
-          {participants.map((p, idx) => (
-            <Select.Option key={idx} value={`${p._id}::${p.chestCode || ''}`}>{p.name}</Select.Option>
-          ))}
+          {participants.map((p, idx) => {
+            const isStudent = participantType === 'Student';
+            const groupName = p.group?.name || (typeof p.group === 'string' ? p.group : null) || p.groupName;
+            const chestNo = p.chestNo;
+            const chestCode = p.chestCode;
+            const searchVal = `${p.name} ${chestNo || ''} ${groupName || ''} ${chestCode || ''} ${p.class || ''}`.toLowerCase();
+            const shortLabel = `${p.name}${chestNo ? ` (#${chestNo})` : ''}${groupName ? ` [${groupName}]` : ''}${chestCode ? ` (${chestCode})` : ''}`;
+
+            return (
+              <Select.Option 
+                key={`${p._id}::${p.chestCode || ''}::${idx}`} 
+                value={`${p._id}::${p.chestCode || ''}`}
+                data-search={searchVal}
+                label={shortLabel}
+              >
+                <div className="flex items-center justify-between py-1 gap-2">
+                  <span className="font-semibold text-gray-800 truncate">{p.name}</span>
+                  <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                    {isStudent && chestNo && (
+                      <Tag color="cyan" className="font-mono text-xs m-0">
+                        Chest: {chestNo}
+                      </Tag>
+                    )}
+                    {isStudent && groupName && (
+                      <Tag color="blue" className="text-xs m-0">
+                        {groupName}
+                      </Tag>
+                    )}
+                    {chestCode && (
+                      <Tag color="purple" className="font-mono text-xs m-0">
+                        Entry: {chestCode}
+                      </Tag>
+                    )}
+                    {isStudent && p.class && (
+                      <Tag className="text-xs m-0 text-gray-500 bg-gray-100 border-gray-200">
+                        {p.class}
+                      </Tag>
+                    )}
+                  </div>
+                </div>
+              </Select.Option>
+            );
+          })}
         </Select>
 
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space direction="vertical" style={{ width: '100%' }} size={10}>
           {rankWinners.map((w, idx) => {
-            const pData = participants.find(p => p._id === w.participant && (p.chestCode || '') === (w.chestCode || ''));
-            const pName = pData ? pData.name : 'Unknown';
+            const details = getParticipantDetails(w);
             return (
-              <Card key={idx} size="small" className="shadow-sm">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-semibold">{pName}</span>
-                  <Button type="text" danger size="small" onClick={() => handleRemoveWinner(w.participant, rank, w.chestCode)}>
+              <Card key={idx} size="small" className="shadow-sm border border-gray-200 rounded-lg hover:shadow transition-shadow">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex-1 pr-2">
+                    <div className="font-bold text-gray-900 text-sm leading-snug">{details.name}</div>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                      {details.isStudent ? (
+                        <>
+                          {details.chestNo && (
+                            <Tag color="cyan" className="font-mono text-xs font-semibold m-0">
+                              Chest: {details.chestNo}
+                            </Tag>
+                          )}
+                          {details.groupName && (
+                            <Tag color="blue" className="text-xs font-medium m-0">
+                              Group: {details.groupName}
+                            </Tag>
+                          )}
+                          {details.chestCode && (
+                            <Tag color="purple" className="font-mono text-xs m-0">
+                              Entry Code: {details.chestCode}
+                            </Tag>
+                          )}
+                          {details.studentClass && (
+                            <Tag className="text-xs m-0 text-gray-600 bg-gray-100 border-gray-200">
+                              Class: {details.studentClass}
+                            </Tag>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {details.chestCode && (
+                            <Tag color="purple" className="font-mono text-xs font-semibold m-0">
+                              Entry Code: {details.chestCode}
+                            </Tag>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <Button 
+                    type="text" 
+                    danger 
+                    size="small" 
+                    onClick={() => handleRemoveWinner(details.id, rank, w.chestCode)}
+                    className="hover:bg-red-50 shrink-0"
+                  >
                     Remove
                   </Button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Text type="secondary" className="text-xs">Points:</Text>
+                <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-2">
+                  <Text type="secondary" className="text-xs font-medium">Points Awarded:</Text>
                   <InputNumber 
                     min={0} 
                     value={w.pointsAwarded} 
-                    onChange={(val) => handleUpdatePoints(w.participant, rank, w.chestCode, val)} 
+                    onChange={(val) => handleUpdatePoints(details.id, rank, w.chestCode, val)} 
                     size="small"
+                    className="w-20 font-semibold"
                   />
                 </div>
               </Card>
             );
           })}
+          {rankWinners.length === 0 && (
+            <div className="text-center py-6 text-gray-400 text-xs italic border border-dashed border-gray-300 rounded-md bg-white/40">
+              No winners assigned yet
+            </div>
+          )}
         </Space>
       </Card>
     );
