@@ -232,19 +232,149 @@ export class PublicService {
   async getResults(query: PaginationQuery): Promise<PaginatedResult<Result>> {
     const filters: any = { status: 'published' }; // STRICTLY ENFORCED: Never show draft results
     
+    // Sort latest published/updated to oldest by default
+    query.sortBy = query.sortBy || 'updatedAt';
+    query.sortOrder = query.sortOrder || 'desc';
+
+    let matchingCompIds: string[] | null = null;
+
     if (query.filter) {
       try {
         const parsed = JSON.parse(query.filter);
-        if (parsed.category) filters.category = parsed.category;
+        if (parsed.category) {
+          const compFilter: any = {};
+          if (parsed.category === 'group') {
+            compFilter.$or = [
+              { type: 'group' },
+              { category: 'group' },
+            ];
+          } else if (parsed.category === 'subJunior') {
+            compFilter.$or = [
+              { category: 'subJunior' },
+              { category: 'Sub Junior' },
+              { category: 'sub_junior' },
+              { category: 'sub-junior' },
+            ];
+            compFilter.type = { $ne: 'group' };
+          } else if (parsed.category === 'junior') {
+            compFilter.$or = [
+              { category: 'junior' },
+              { category: 'Junior' },
+            ];
+            compFilter.type = { $ne: 'group' };
+          } else if (parsed.category === 'senior') {
+            compFilter.$or = [
+              { category: 'senior' },
+              { category: 'Senior' },
+            ];
+            compFilter.type = { $ne: 'group' };
+          } else if (parsed.category === 'general') {
+            compFilter.$or = [
+              { category: 'general' },
+              { category: 'General' },
+              { category: null, type: { $ne: 'group' } },
+              { category: { $exists: false }, type: { $ne: 'group' } },
+            ];
+          }
+          const comps = await this.competitionModel.find(compFilter).select('_id').exec();
+          matchingCompIds = comps.map(c => c._id.toString());
+        }
       } catch (e) {}
+    }
+
+    // Handle search across competition names, student names, chest numbers, group names & chest codes
+    if (query.search && query.search.trim()) {
+      const cleanSearch = query.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const searchRegex = new RegExp(cleanSearch, 'i');
+
+      const [matchedComps, matchedStudents, matchedGroups] = await Promise.all([
+        this.competitionModel.find({
+          $or: [
+            { name: searchRegex },
+            { category: searchRegex },
+          ]
+        }).select('_id').exec(),
+        this.studentModel.find({
+          $or: [
+            { name: searchRegex },
+            { chestNo: searchRegex },
+            { class: searchRegex },
+          ]
+        }).select('_id').exec(),
+        this.groupModel.find({ name: searchRegex }).select('_id').exec(),
+      ]);
+
+      const compIdsFromSearch = matchedComps.map(c => c._id.toString());
+      const groupIds = matchedGroups.map(g => g._id.toString());
+
+      // If group names matched, also include students belonging to those groups
+      let studentsInMatchedGroups: any[] = [];
+      if (groupIds.length > 0) {
+        const groupBsonIds = groupIds.filter(id => Types.ObjectId.isValid(id)).map(id => new Types.ObjectId(id));
+        studentsInMatchedGroups = await this.studentModel.find({
+          group: { $in: [...groupIds, ...groupBsonIds] }
+        }).select('_id').exec();
+      }
+
+      const allStudentIds = [
+        ...matchedStudents.map(s => s._id.toString()),
+        ...studentsInMatchedGroups.map(s => s._id.toString())
+      ];
+
+      const compIdObjects = compIdsFromSearch.filter(id => Types.ObjectId.isValid(id)).map(id => new Types.ObjectId(id));
+      const allCompMatches = [...compIdsFromSearch, ...compIdObjects];
+
+      const allPartIds = [...allStudentIds, ...groupIds];
+      const allPartObjects = allPartIds.filter(id => Types.ObjectId.isValid(id)).map(id => new Types.ObjectId(id));
+      const allPartMatches = [...allPartIds, ...allPartObjects];
+
+      const searchOrClauses: any[] = [
+        { 'winners.chestCode': searchRegex }
+      ];
+
+      if (allCompMatches.length > 0) {
+        searchOrClauses.push({ competition: { $in: allCompMatches } });
+      }
+      if (allPartMatches.length > 0) {
+        searchOrClauses.push({ 'winners.participant': { $in: allPartMatches } });
+      }
+
+      if (matchingCompIds !== null) {
+        const catIdObjects = matchingCompIds.filter(id => Types.ObjectId.isValid(id)).map(id => new Types.ObjectId(id));
+        const allCatCompMatches = [...matchingCompIds, ...catIdObjects];
+
+        filters.$and = [
+          { competition: { $in: allCatCompMatches } },
+          { $or: searchOrClauses }
+        ];
+      } else {
+        filters.$or = searchOrClauses;
+      }
+
+      // Clear query.search so paginate helper does not do redundant regex
+      query.search = '';
+    } else if (matchingCompIds !== null) {
+      const catIdObjects = matchingCompIds.filter(id => Types.ObjectId.isValid(id)).map(id => new Types.ObjectId(id));
+      const allCatCompMatches = [...matchingCompIds, ...catIdObjects];
+      filters.competition = { $in: allCatCompMatches };
     }
 
     return paginate<ResultDocument>(
       this.resultModel,
       query,
-      [], // no direct searchable string fields on Result root usually
+      [],
       filters,
-      { populate: ['competition', { path: 'winners.participant', strictPopulate: false }] }
+      {
+        populate: [
+          'competition',
+          {
+            path: 'winners.participant',
+            select: 'name chestNo class category group profileImage logoUrl groupName',
+            populate: { path: 'group', select: 'name logoUrl', strictPopulate: false },
+            strictPopulate: false,
+          },
+        ],
+      }
     );
   }
 
@@ -252,10 +382,18 @@ export class PublicService {
     const isObjectId = Types.ObjectId.isValid(id);
     const query: any = isObjectId
       ? {
-          $or: [{ _id: new Types.ObjectId(id) }, { competition: new Types.ObjectId(id) }],
+          $or: [
+            { _id: id },
+            { _id: new Types.ObjectId(id) },
+            { competition: id },
+            { competition: new Types.ObjectId(id) },
+          ],
           status: 'published',
         }
-      : { status: 'published' };
+      : {
+          $or: [{ _id: id }, { competition: id }],
+          status: 'published',
+        };
 
     const result = await this.resultModel
       .findOne(query)

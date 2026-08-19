@@ -1,10 +1,21 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Pagination, Spin, Select, Input } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { Pagination, Spin, Select, Input, Tag } from 'antd';
+import { SearchOutlined, TrophyFilled, ClockCircleOutlined, ReloadOutlined, FilterOutlined } from '@ant-design/icons';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../services/apiClient';
 import { LatticeBackground, GlassCard, SectionHeading } from '../../components/publiccomponents/DesignSystem';
+
+const PAGE_SIZE = 12;
+
+const CATEGORY_OPTIONS = [
+  { value: 'all', label: 'All Categories' },
+  { value: 'subJunior', label: 'Sub Junior' },
+  { value: 'junior', label: 'Junior' },
+  { value: 'senior', label: 'Senior' },
+  { value: 'group', label: 'Group Events' },
+  { value: 'general', label: 'General' },
+];
 
 const Results = () => {
   const navigate = useNavigate();
@@ -21,6 +32,7 @@ const Results = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
+      setPage(1);
     }, 400);
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -28,18 +40,26 @@ const Results = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
+      const filters: any = {};
+      if (categoryFilter && categoryFilter !== 'all') {
+        filters.category = categoryFilter;
+      }
+
       const res = await apiClient.get('/public/results', {
         params: {
           page,
-          limit: 50,
-          sortBy: '_id',
-          sortOrder: 'desc'
-        }
+          limit: PAGE_SIZE,
+          search: debouncedSearch.trim() || undefined,
+          filter: Object.keys(filters).length > 0 ? JSON.stringify(filters) : undefined,
+          sortBy: 'updatedAt',
+          sortOrder: 'desc',
+        },
       });
-      setData(res.data.data);
-      setTotal(res.data.meta.total);
+
+      setData(res.data.data || []);
+      setTotal(res.data.meta?.total || 0);
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch public results:', err);
     } finally {
       setLoading(false);
     }
@@ -48,191 +68,329 @@ const Results = () => {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, [page, debouncedSearch, categoryFilter]);
 
-  // Compute filtered results based on category & debounced search query
-  const filteredData = useMemo(() => {
-    let list = data;
+  // Real-time synchronization when results are published/withdrawn
+  useEffect(() => {
+    const handleRefresh = () => {
+      fetchData();
+    };
+    window.addEventListener('refresh-graphs', handleRefresh);
+    return () => window.removeEventListener('refresh-graphs', handleRefresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, debouncedSearch, categoryFilter]);
 
-    if (categoryFilter) {
-      list = list.filter((item: any) => {
-        const comp = item.competition;
-        if (!comp) return false;
-        if (categoryFilter === 'group') {
-          return comp.type === 'group' || (comp.category && comp.category.toLowerCase() === 'group');
-        }
-        const compCat = (comp.category || '').toLowerCase().replace(/[\s-_]+/g, '');
-        const filterCat = categoryFilter.toLowerCase().replace(/[\s-_]+/g, '');
-        return compCat === filterCat;
+  const handleCategoryChange = (val: string | null) => {
+    setCategoryFilter(val === 'all' ? null : val);
+    setPage(1);
+  };
+
+  const handleResetFilters = () => {
+    setCategoryFilter(null);
+    setSearchQuery('');
+    setDebouncedSearch('');
+    setPage(1);
+  };
+
+  // Format relative or date string
+  const formatPublishedDate = (dateStr?: string) => {
+    if (!dateStr) return null;
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
       });
+    } catch {
+      return null;
     }
-
-    if (debouncedSearch.trim()) {
-      const q = debouncedSearch.toLowerCase().trim();
-      list = list.filter((item: any) => {
-        const compName = item.competition?.name?.toLowerCase() || '';
-        const compCategory = item.competition?.category?.toLowerCase() || '';
-        const compType = item.competition?.type?.toLowerCase() || '';
-        const winnerMatch = item.winners?.some((w: any) =>
-          w.participant?.name?.toLowerCase().includes(q) ||
-          w.participant?.groupName?.toLowerCase().includes(q) ||
-          w.chestCode?.toLowerCase().includes(q)
-        );
-        return compName.includes(q) || compCategory.includes(q) || compType.includes(q) || winnerMatch;
-      });
-    }
-
-    return list;
-  }, [data, debouncedSearch, categoryFilter]);
+  };
 
   return (
-    <div className="min-h-screen pt-32 pb-20 relative bg-[#F8F9FA] text-slate-900">
+    <div className="min-h-screen pt-32 pb-24 relative bg-[#F8F9FA] text-slate-900">
       <LatticeBackground opacity={0.03} parallax={false} />
 
-      <div className="max-w-7xl w-full mx-auto px-6 relative z-10">
+      <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 relative z-10">
         {/* Header + Search & Filter Controls */}
         <div className="flex flex-col items-center justify-center text-center mb-10">
           <SectionHeading
             title="Published Results"
             titleAr="النتائج المنشورة"
-            subtitle="Official competition outcomes and winner breakdowns."
+            subtitle="Official festival outcomes, winners podium, and live leaderboard rankings."
             centered={true}
           />
 
           {/* Search bar + Category Filter */}
-          <div className="w-full max-w-2xl mt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="w-full max-w-2xl mt-5 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Input
-              placeholder="Search competition or winner name..."
-              prefix={<SearchOutlined className="text-slate-400" />}
+              placeholder="Search competition, winner name, or chest code..."
+              prefix={<SearchOutlined className="text-sky-600 mr-1.5" />}
               allowClear
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="h-11 rounded-full shadow-sm border-slate-300 flex-1"
-              style={{ minWidth: 260 }}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-12 rounded-full shadow-sm border-slate-200 flex-1 px-4 text-sm"
+              size="large"
             />
 
             <Select
               allowClear
-              placeholder="Filter by Category"
-              className="w-full sm:w-56 h-11"
+              placeholder="All Categories"
+              value={categoryFilter || undefined}
+              className="w-full sm:w-56 h-12"
               size="large"
-              onChange={val => { setCategoryFilter(val); setPage(1); }}
-              options={[
-                { value: 'subJunior', label: 'Sub Junior' },
-                { value: 'junior', label: 'Junior' },
-                { value: 'senior', label: 'Senior' },
-                { value: 'group', label: 'Group Competitions' },
-                { value: 'general', label: 'General' }
-              ]}
+              onChange={handleCategoryChange}
+              options={CATEGORY_OPTIONS}
+              suffixIcon={<FilterOutlined className="text-sky-600" />}
             />
+          </div>
+
+          {/* Quick Category Filter Pills */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-4 max-w-3xl">
+            {CATEGORY_OPTIONS.map((opt) => {
+              const isSelected = (!categoryFilter && opt.value === 'all') || categoryFilter === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => handleCategoryChange(opt.value)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border ${
+                    isSelected
+                      ? 'bg-sky-600 text-white border-sky-600 shadow-sm shadow-sky-600/30 scale-105'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-sky-300 hover:text-sky-600'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Content */}
+        {/* Results Metadata Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-6 px-1">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>
+              Showing {total === 0 ? '0' : `${(page - 1) * PAGE_SIZE + 1}-${Math.min(page * PAGE_SIZE, total)}`} of {total} Published Results
+            </span>
+            {(categoryFilter || debouncedSearch) && (
+              <span className="text-slate-400 font-medium">(Filtered)</span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Tag color="gold" className="rounded-full px-3 py-0.5 text-[11px] font-black uppercase tracking-wider border-0 shadow-sm">
+              <ClockCircleOutlined className="mr-1" /> Latest to Oldest
+            </Tag>
+            <button
+              onClick={fetchData}
+              title="Refresh results"
+              className="p-1.5 px-2.5 rounded-full text-xs font-bold bg-white text-slate-600 hover:text-sky-600 hover:bg-sky-50 border border-slate-200 transition-all cursor-pointer"
+            >
+              <ReloadOutlined className={loading ? 'animate-spin' : ''} />
+            </button>
+          </div>
+        </div>
+
+        {/* Content Section */}
         {loading ? (
-          <div className="flex justify-center py-24"><Spin size="large" /></div>
+          <div className="flex flex-col items-center justify-center py-28 gap-4">
+            <Spin size="large" />
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Loading festival results...</p>
+          </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredData.map((result, index) => {
-                const firstWinner = result.winners?.find((w: any) => w.rank === '1st');
-                const secondWinner = result.winners?.find((w: any) => w.rank === '2nd');
-                const thirdWinner = result.winners?.find((w: any) => w.rank === '3rd');
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`${page}-${categoryFilter}-${debouncedSearch}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              >
+                {data.map((result, index) => {
+                  const firstWinner = result.winners?.find((w: any) => w.rank === '1st');
+                  const secondWinner = result.winners?.find((w: any) => w.rank === '2nd');
+                  const thirdWinner = result.winners?.find((w: any) => w.rank === '3rd');
 
-                return (
-                  <motion.div
-                    key={result._id}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.04 }}
-                  >
-                    <GlassCard
-                      className="p-6 flex flex-col items-center justify-between text-center h-full bg-white border border-slate-200 shadow-sm hover:shadow-md cursor-pointer group"
-                      onClick={() => navigate(`/results/${result._id}`)}
+                  const isGroup = result.competition?.type === 'group';
+                  const categoryName = result.competition?.category || (isGroup ? 'Group Event' : 'General');
+                  const publishedTime = formatPublishedDate(result.updatedAt || result.createdAt);
+
+                  return (
+                    <motion.div
+                      key={result._id}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03, duration: 0.25 }}
                     >
-                      {/* Top badges */}
-                      <div className="w-full flex flex-col items-center">
-                        <div className="flex justify-center gap-2 items-center mb-4">
-                          <span
-                            className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-sky-50 text-sky-700 border border-sky-100"
-                          >
-                            {result.competition?.category || result.competition?.type}
-                          </span>
-                          <span
-                            className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-100"
-                          >
-                            Official
-                          </span>
-                        </div>
-
-                        <h3
-                          className="font-extrabold text-xl text-slate-900 mb-5 text-center line-clamp-2 group-hover:text-sky-600 transition-colors"
-                          style={{ fontFamily: 'var(--font-display)' }}
-                        >
-                          {result.competition?.name || 'Competition Event'}
-                        </h3>
-
-                        {/* Winners Preview */}
-                        <div
-                          className="space-y-2.5 mb-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 w-full text-left"
-                        >
-                          {firstWinner && (
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="font-bold text-amber-600">🥇 1st Place</span>
-                              <span className="font-bold text-slate-900 text-right truncate max-w-[160px]">
-                                {firstWinner.participant?.name || 'Winner'} {firstWinner.chestCode ? `(${firstWinner.chestCode})` : ''}
-                              </span>
-                            </div>
-                          )}
-                          {secondWinner && (
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="font-bold text-slate-500">🥈 2nd Place</span>
-                              <span className="font-semibold text-slate-700 text-right truncate max-w-[160px]">
-                                {secondWinner.participant?.name || 'Winner'} {secondWinner.chestCode ? `(${secondWinner.chestCode})` : ''}
-                              </span>
-                            </div>
-                          )}
-                          {thirdWinner && (
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="font-bold text-orange-700">🥉 3rd Place</span>
-                              <span className="font-semibold text-slate-700 text-right truncate max-w-[160px]">
-                                {thirdWinner.participant?.name || 'Winner'} {thirdWinner.chestCode ? `(${thirdWinner.chestCode})` : ''}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Bottom */}
-                      <div
-                        className="w-full text-sm pt-4 flex justify-between items-center border-t border-slate-100 text-slate-500 font-medium"
+                      <GlassCard
+                        className="p-6 flex flex-col justify-between h-full bg-white border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-sky-300 transition-all duration-300 rounded-3xl cursor-pointer group hover:-translate-y-1"
+                        onClick={() => navigate(`/results/${result._id}`)}
                       >
-                        <span className="capitalize text-xs font-semibold">{result.competition?.type || 'Event'}</span>
-                        <span className="font-bold text-sky-600 inline-flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                          View Details &rarr;
-                        </span>
-                      </div>
-                    </GlassCard>
-                  </motion.div>
-                );
-              })}
-            </div>
+                        {/* Top Meta Badges & Timestamp */}
+                        <div>
+                          <div className="w-full flex items-center justify-between gap-2 mb-3.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-sky-50 text-sky-700 border border-sky-200/70 shadow-xs">
+                                {categoryName}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/70 shadow-xs flex items-center gap-1">
+                                <TrophyFilled className="text-[10px]" /> Official
+                              </span>
+                            </div>
 
-            {filteredData.length === 0 && (
-              <GlassCard className="text-center py-20" hover={false}>
-                <p className="text-slate-400 font-medium">No published results found for your search/filter.</p>
+                            {publishedTime && (
+                              <span className="text-[10px] font-semibold text-slate-400 shrink-0">
+                                {publishedTime}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Competition Name */}
+                          <h3
+                            className="font-extrabold text-lg sm:text-xl text-slate-900 mb-4 line-clamp-2 group-hover:text-sky-600 transition-colors leading-snug"
+                            style={{ fontFamily: 'var(--font-display)' }}
+                          >
+                            {result.competition?.name || 'Competition Event'}
+                          </h3>
+
+                          {/* Winners Preview Podium Box */}
+                          <div className="space-y-2 mb-5 p-3.5 rounded-2xl bg-slate-50/80 border border-slate-100 w-full text-left">
+                            {/* 1st Place */}
+                            {firstWinner ? (
+                              <div className="flex items-center justify-between gap-2 text-xs p-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-base leading-none shrink-0">🥇</span>
+                                  <div className="min-w-0">
+                                    <div className="font-extrabold text-amber-950 truncate max-w-[170px] sm:max-w-[190px]">
+                                      {firstWinner.participant?.name || 'Winner'}
+                                    </div>
+                                    <div className="text-[10px] font-bold text-amber-800/80 truncate">
+                                      {firstWinner.chestCode ? `#${firstWinner.chestCode}` : ''}
+                                      {firstWinner.participant?.group?.name ? ` • ${firstWinner.participant.group.name}` : (firstWinner.participant?.groupName ? ` • ${firstWinner.participant.groupName}` : '')}
+                                    </div>
+                                  </div>
+                                </div>
+                                <span className="font-mono font-black text-amber-700 text-xs shrink-0">
+                                  +{firstWinner.pointsAwarded} pts
+                                </span>
+                              </div>
+                            ) : null}
+
+                            {/* 2nd Place */}
+                            {secondWinner ? (
+                              <div className="flex items-center justify-between gap-2 text-xs p-1.5 rounded-xl bg-slate-100/80 border border-slate-200/60">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-base leading-none shrink-0">🥈</span>
+                                  <div className="min-w-0">
+                                    <div className="font-bold text-slate-800 truncate max-w-[170px] sm:max-w-[190px]">
+                                      {secondWinner.participant?.name || 'Winner'}
+                                    </div>
+                                    <div className="text-[10px] text-slate-500 font-medium truncate">
+                                      {secondWinner.chestCode ? `#${secondWinner.chestCode}` : ''}
+                                      {secondWinner.participant?.group?.name ? ` • ${secondWinner.participant.group.name}` : (secondWinner.participant?.groupName ? ` • ${secondWinner.participant.groupName}` : '')}
+                                    </div>
+                                  </div>
+                                </div>
+                                <span className="font-mono font-bold text-slate-600 text-xs shrink-0">
+                                  +{secondWinner.pointsAwarded} pts
+                                </span>
+                              </div>
+                            ) : null}
+
+                            {/* 3rd Place */}
+                            {thirdWinner ? (
+                              <div className="flex items-center justify-between gap-2 text-xs p-1.5 rounded-xl bg-amber-900/5 border border-amber-900/15">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="text-base leading-none shrink-0">🥉</span>
+                                  <div className="min-w-0">
+                                    <div className="font-bold text-amber-900 truncate max-w-[170px] sm:max-w-[190px]">
+                                      {thirdWinner.participant?.name || 'Winner'}
+                                    </div>
+                                    <div className="text-[10px] text-amber-800/70 font-medium truncate">
+                                      {thirdWinner.chestCode ? `#${thirdWinner.chestCode}` : ''}
+                                      {thirdWinner.participant?.group?.name ? ` • ${thirdWinner.participant.group.name}` : (thirdWinner.participant?.groupName ? ` • ${thirdWinner.participant.groupName}` : '')}
+                                    </div>
+                                  </div>
+                                </div>
+                                <span className="font-mono font-bold text-amber-800 text-xs shrink-0">
+                                  +{thirdWinner.pointsAwarded} pts
+                                </span>
+                              </div>
+                            ) : null}
+
+                            {!firstWinner && !secondWinner && !thirdWinner && (
+                              <div className="py-2 text-center text-xs text-slate-400">
+                                Winner details published
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Bottom Card Action */}
+                        <div className="w-full pt-3.5 flex items-center justify-between border-t border-slate-100 text-slate-500 font-medium">
+                          <span className="capitalize text-xs font-semibold text-slate-400">
+                            {isGroup ? '👥 Group Event' : '👤 Individual'}
+                          </span>
+                          <span className="text-xs font-extrabold text-sky-600 inline-flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                            View Full Result & Poster &rarr;
+                          </span>
+                        </div>
+                      </GlassCard>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Empty State */}
+            {data.length === 0 && (
+              <GlassCard className="text-center py-20 bg-white border border-slate-200 shadow-sm rounded-3xl" hover={false}>
+                <div className="max-w-md mx-auto flex flex-col items-center">
+                  <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-2xl text-slate-400 mb-4">
+                    🔍
+                  </div>
+                  <h4 className="font-extrabold text-lg text-slate-800 mb-1" style={{ fontFamily: 'var(--font-display)' }}>
+                    No Published Results Found
+                  </h4>
+                  <p className="text-sm text-slate-500 mb-6">
+                    {debouncedSearch || categoryFilter
+                      ? 'No results matched your search or category filter criteria.'
+                      : 'Official competition results will appear here once published by the fest jury.'}
+                  </p>
+                  {(debouncedSearch || categoryFilter) && (
+                    <button
+                      onClick={handleResetFilters}
+                      className="px-5 py-2.5 rounded-full text-xs font-black uppercase tracking-wider bg-sky-600 text-white hover:bg-sky-500 transition-all shadow-md shadow-sky-600/20 cursor-pointer"
+                    >
+                      Reset All Filters
+                    </button>
+                  )}
+                </div>
               </GlassCard>
             )}
 
-            {total > 24 && (
-              <div className="flex justify-center mt-12">
+            {/* Pagination Controls */}
+            {total > PAGE_SIZE && (
+              <div className="flex justify-center items-center mt-12 py-4">
                 <Pagination
                   current={page}
                   total={total}
-                  pageSize={24}
-                  onChange={setPage}
+                  pageSize={PAGE_SIZE}
+                  onChange={(p) => {
+                    setPage(p);
+                    window.scrollTo({ top: 120, behavior: 'smooth' });
+                  }}
                   showSizeChanger={false}
+                  showTotal={(tot, range) => (
+                    <span className="text-xs font-bold text-slate-500">
+                      {range[0]}-{range[1]} of {tot} results
+                    </span>
+                  )}
+                  className="custom-pagination font-semibold"
                 />
               </div>
             )}
@@ -244,3 +402,4 @@ const Results = () => {
 };
 
 export default Results;
+
