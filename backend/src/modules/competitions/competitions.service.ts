@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Competition, CompetitionDocument } from './competition.schema';
 import { Result, ResultDocument } from '../results/result.schema';
 import { Group, GroupDocument } from '../groups/group.schema';
@@ -254,9 +254,10 @@ export class CompetitionsService implements OnModuleInit {
     }
 
     // Remove competition reference from any students registered for it
+    const compObjectId = new Types.ObjectId(id);
     await this.studentModel.updateMany(
-      { 'programs.competition': id },
-      { $pull: { programs: { competition: id } } }
+      { 'programs.competition': { $in: [compObjectId, id] } },
+      { $pull: { programs: { competition: { $in: [compObjectId, id] } } } } as any
     ).exec();
 
     // Delete the competition document

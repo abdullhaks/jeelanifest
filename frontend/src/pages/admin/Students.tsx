@@ -175,9 +175,12 @@ const Students = () => {
       
       // Load current student programs
       const studRes = await apiClient.get(`/students/${studentId}`);
-      const compIds = studRes.data.programs?.map((p: any) => 
-        typeof p.competition === 'object' ? p.competition._id : p.competition
-      ) || [];
+      const compIds = (studRes.data.programs || [])
+        .map((p: any) => {
+          if (!p.competition) return null;
+          return typeof p.competition === 'object' ? p.competition._id : p.competition;
+        })
+        .filter(Boolean);
       programsForm.setFieldsValue({ competitionIds: compIds });
       setProgramsDrawerVisible(true);
     } catch (error) {

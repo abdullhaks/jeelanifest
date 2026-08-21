@@ -144,7 +144,9 @@ export class StudentsService implements OnModuleInit {
     const existingPrograms = student.programs || [];
     
     const newPrograms = competitionIds.map(compId => {
-      const existing = existingPrograms.find(p => p.competition.toString() === compId);
+      const existing = existingPrograms.find(
+        p => p.competition && p.competition.toString() === compId
+      );
       return {
         competition: new Types.ObjectId(compId),
         rankAwarded: existing ? existing.rankAwarded : null,
