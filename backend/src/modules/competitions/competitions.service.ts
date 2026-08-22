@@ -89,7 +89,26 @@ export class CompetitionsService implements OnModuleInit {
         if (parsedFilters.type) filters.type = parsedFilters.type;
         if (parsedFilters.status) filters.status = parsedFilters.status;
         if (parsedFilters.stage) filters.stage = parsedFilters.stage;
-        if (parsedFilters.category) filters.category = parsedFilters.category;
+        if (parsedFilters.category) {
+          const cat = Array.isArray(parsedFilters.category) ? parsedFilters.category[0] : parsedFilters.category;
+          if (cat === 'group') {
+            filters.type = 'group';
+          } else if (cat) {
+            filters.category = cat;
+          }
+        }
+        if (parsedFilters.date) {
+          const dateVal = Array.isArray(parsedFilters.date) ? parsedFilters.date[0] : parsedFilters.date;
+          if (dateVal) {
+            filters.date = { $regex: new RegExp(dateVal, 'i') };
+          }
+        }
+        if (parsedFilters.time) {
+          const timeVal = Array.isArray(parsedFilters.time) ? parsedFilters.time[0] : parsedFilters.time;
+          if (timeVal) {
+            filters.time = { $regex: new RegExp(timeVal, 'i') };
+          }
+        }
       } catch (e) {
         // invalid JSON filter, ignore
       }
@@ -98,7 +117,7 @@ export class CompetitionsService implements OnModuleInit {
     const result = await paginate<CompetitionDocument>(
       this.competitionModel,
       query,
-      ['name'], // searchable fields
+      ['name', 'date', 'time'], // searchable fields
       filters
     );
 

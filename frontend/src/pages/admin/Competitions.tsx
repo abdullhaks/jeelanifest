@@ -5,7 +5,8 @@ import {
 } from 'antd';
 import { 
   SearchOutlined, PlusOutlined, EditOutlined, 
-  DeleteOutlined, ExclamationCircleOutlined, EyeOutlined, UserOutlined
+  DeleteOutlined, ExclamationCircleOutlined, EyeOutlined, UserOutlined,
+  CalendarOutlined, ClockCircleOutlined, ReloadOutlined
 } from '@ant-design/icons';
 import { z } from 'zod';
 import apiClient from '../../services/apiClient';
@@ -36,7 +37,14 @@ const Competitions = () => {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState<{type?: string, status?: string, stage?: string}>({});
+  const [filters, setFilters] = useState<{
+    type?: string;
+    category?: string;
+    status?: string;
+    stage?: string;
+    date?: string;
+    time?: string;
+  }>({});
   const [sort, setSort] = useState<{sortBy: string, sortOrder: string}>({ sortBy: 'createdAt', sortOrder: 'desc' });
 
   // Detail Modal State
@@ -57,7 +65,7 @@ const Competitions = () => {
     apiClient.get('/groups?limit=100').then(res => setGroups(res.data.data)).catch(() => {});
   }, []);
 
-  // Debounce search
+  // Debounce search & refetch on state change
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       fetchCompetitions();
@@ -69,17 +77,21 @@ const Competitions = () => {
   const fetchCompetitions = async () => {
     setLoading(true);
     try {
+      const activeFilters: Record<string, string> = {};
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v) activeFilters[k] = v;
+      });
+
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
         search,
         sortBy: sort.sortBy,
         sortOrder: sort.sortOrder,
-        ...(Object.keys(filters).length > 0 && { filter: JSON.stringify(filters) })
+        ...(Object.keys(activeFilters).length > 0 && { filter: JSON.stringify(activeFilters) })
       });
 
       const response = await apiClient.get(`/competitions?${params}`);
-      console.log('response data is',response)
       setData(response.data.data);
       setTotal(response.data.meta.total);
     } catch (error) {
@@ -93,18 +105,47 @@ const Competitions = () => {
     setPage(pagination.current);
     setLimit(pagination.pageSize);
     
-    if (sorter.field) {
+    if (sorter && sorter.field) {
       setSort({
         sortBy: sorter.field,
         sortOrder: sorter.order === 'ascend' ? 'asc' : 'desc'
       });
     }
 
-    const newFilters: any = {};
+    const newFilters: {
+      type?: string;
+      category?: string;
+      status?: string;
+      stage?: string;
+      date?: string;
+      time?: string;
+    } = {};
     if (tableFilters.type?.[0]) newFilters.type = tableFilters.type[0];
+    if (tableFilters.category?.[0]) newFilters.category = tableFilters.category[0];
     if (tableFilters.status?.[0]) newFilters.status = tableFilters.status[0];
     if (tableFilters.stage?.[0]) newFilters.stage = tableFilters.stage[0];
+    if (tableFilters.date?.[0]) newFilters.date = tableFilters.date[0];
+    if (tableFilters.time?.[0]) newFilters.time = tableFilters.time[0];
     setFilters(newFilters);
+  };
+
+  const handleFilterChange = (key: string, value?: string) => {
+    setPage(1);
+    setFilters(prev => {
+      const updated = { ...prev };
+      if (value) {
+        (updated as any)[key] = value;
+      } else {
+        delete (updated as any)[key];
+      }
+      return updated;
+    });
+  };
+
+  const handleResetFilters = () => {
+    setSearch('');
+    setFilters({});
+    setPage(1);
   };
 
   const handleDelete = (id: string) => {
@@ -207,6 +248,7 @@ const Competitions = () => {
     {
       title: 'Type',
       dataIndex: 'type',
+      filteredValue: filters.type ? [filters.type] : null,
       filters: [
         { text: 'Group', value: 'group' },
         { text: 'Individual', value: 'individual' },
@@ -214,13 +256,14 @@ const Competitions = () => {
       filterMultiple: false,
       render: (type: string) => (
         <Tag color={type === 'group' ? 'geekblue' : 'purple'}>
-          {type.toUpperCase()}
+          {type ? type.toUpperCase() : 'N/A'}
         </Tag>
       )
     },
     {
       title: 'Category',
       dataIndex: 'category',
+      filteredValue: filters.category ? [filters.category] : null,
       filters: [
         { text: 'Sub Junior', value: 'subJunior' },
         { text: 'Junior', value: 'junior' },
@@ -253,6 +296,7 @@ const Competitions = () => {
     {
       title: 'Status',
       dataIndex: 'status',
+      filteredValue: filters.status ? [filters.status] : null,
       filters: [
         { text: 'Upcoming', value: 'upcoming' },
         { text: 'Started', value: 'started' },
@@ -271,7 +315,7 @@ const Competitions = () => {
             }))
           }}>
             <Tag color={colors[status]} className="cursor-pointer">
-              {status.toUpperCase()}
+              {status ? status.toUpperCase() : 'UPCOMING'}
             </Tag>
           </Dropdown>
         );
@@ -280,6 +324,7 @@ const Competitions = () => {
     {
       title: 'Stage',
       dataIndex: 'stage',
+      filteredValue: filters.stage ? [filters.stage] : null,
       filters: [
         { text: 'Stage 1', value: 'stage1' },
         { text: 'Stage 2', value: 'stage2' },
@@ -289,11 +334,86 @@ const Competitions = () => {
       render: (stage: string) => stage ? <Tag>{stage}</Tag> : <Tag color="warning">Unassigned</Tag>
     },
     {
-      title: 'Date & Time',
-      render: (_: any, record: any) => {
-        const t12 = formatTime12h(record.time);
-        return [record.date, t12].filter(Boolean).join(' ') || 'N/A';
-      }
+      title: 'Date',
+      dataIndex: 'date',
+      sorter: true,
+      filteredValue: filters.date ? [filters.date] : null,
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: any) => (
+        <div style={{ padding: 12, width: 220 }} onKeyDown={(e) => e.stopPropagation()}>
+          <Text strong className="block mb-2 text-xs text-gray-500 uppercase">Filter by Date</Text>
+          <Input
+            type="date"
+            value={selectedKeys[0] || ''}
+            onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+            onPressEnter={() => confirm()}
+            style={{ marginBottom: 10, width: '100%' }}
+          />
+          <Space className="w-full justify-between">
+            <Button
+              type="primary"
+              onClick={() => confirm()}
+              icon={<SearchOutlined />}
+              size="small"
+            >
+              Filter
+            </Button>
+            <Button
+              onClick={() => {
+                clearFilters && clearFilters();
+                confirm();
+              }}
+              size="small"
+            >
+              Reset
+            </Button>
+          </Space>
+        </div>
+      ),
+      filterIcon: (filtered: boolean) => (
+        <CalendarOutlined style={{ color: filtered ? 'var(--color-primary, #1677ff)' : undefined, fontSize: '14px' }} />
+      ),
+      render: (date: string) => date ? <span className="font-mono text-sm font-medium">{date}</span> : <Tag>N/A</Tag>
+    },
+    {
+      title: 'Time',
+      dataIndex: 'time',
+      sorter: true,
+      filteredValue: filters.time ? [filters.time] : null,
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: any) => (
+        <div style={{ padding: 12, width: 220 }} onKeyDown={(e) => e.stopPropagation()}>
+          <Text strong className="block mb-2 text-xs text-gray-500 uppercase">Filter by Time</Text>
+          <Input
+            type="time"
+            value={selectedKeys[0] || ''}
+            onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+            onPressEnter={() => confirm()}
+            style={{ marginBottom: 10, width: '100%' }}
+          />
+          <Space className="w-full justify-between">
+            <Button
+              type="primary"
+              onClick={() => confirm()}
+              icon={<SearchOutlined />}
+              size="small"
+            >
+              Filter
+            </Button>
+            <Button
+              onClick={() => {
+                clearFilters && clearFilters();
+                confirm();
+              }}
+              size="small"
+            >
+              Reset
+            </Button>
+          </Space>
+        </div>
+      ),
+      filterIcon: (filtered: boolean) => (
+        <ClockCircleOutlined style={{ color: filtered ? 'var(--color-primary, #1677ff)' : undefined, fontSize: '14px' }} />
+      ),
+      render: (time: string) => time ? <span className="font-mono text-sm font-medium">{formatTime12h(time)}</span> : <Tag>N/A</Tag>
     },
     {
       title: 'Action',
@@ -315,7 +435,6 @@ const Competitions = () => {
     setParticipantsData([]);
     try {
       const res = await apiClient.get(`/results/participants/${record._id}`);
-      console.log('res data is ',res.data)
       setParticipantsData(res.data.data || []);
     } catch (e) {
       console.error(e);
@@ -324,6 +443,8 @@ const Competitions = () => {
       setParticipantsLoading(false);
     }
   };
+
+  const hasActiveFilters = Object.keys(filters).some(k => Boolean((filters as any)[k])) || Boolean(search);
 
   return (
     <div>
@@ -339,15 +460,128 @@ const Competitions = () => {
         </Button>
       </div>
 
-      <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
-        <Input
-          placeholder="Search competitions..."
-          prefix={<SearchOutlined className="text-gray-400" />}
-          onChange={e => setSearch(e.target.value)}
-          className="max-w-md"
-          size="large"
-          allowClear
-        />
+      {/* Filter & Search Bar */}
+      <div className="bg-white p-4 rounded-lg shadow-sm mb-4 space-y-3">
+        <Row gutter={[16, 12]} align="middle">
+          <Col xs={24} md={8} lg={6}>
+            <Input
+              placeholder="Search name, date, time..."
+              prefix={<SearchOutlined className="text-gray-400" />}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              size="middle"
+              allowClear
+            />
+          </Col>
+          <Col xs={12} sm={6} md={4} lg={4}>
+            <Select
+              placeholder="Category"
+              value={filters.category || undefined}
+              onChange={val => handleFilterChange('category', val)}
+              allowClear
+              className="w-full"
+              options={[
+                { label: 'Sub-Junior', value: 'subJunior' },
+                { label: 'Junior', value: 'junior' },
+                { label: 'Senior', value: 'senior' },
+                { label: 'Group', value: 'group' },
+              ]}
+            />
+          </Col>
+          <Col xs={12} sm={6} md={4} lg={4}>
+            <Input
+              type="date"
+              placeholder="Filter Date"
+              value={filters.date || ''}
+              onChange={e => handleFilterChange('date', e.target.value || undefined)}
+              className="w-full"
+            />
+          </Col>
+          <Col xs={12} sm={6} md={4} lg={4}>
+            <Input
+              type="time"
+              placeholder="Filter Time"
+              value={filters.time || ''}
+              onChange={e => handleFilterChange('time', e.target.value || undefined)}
+              className="w-full"
+            />
+          </Col>
+          <Col xs={12} sm={6} md={4} lg={3}>
+            <Select
+              placeholder="Status"
+              value={filters.status || undefined}
+              onChange={val => handleFilterChange('status', val)}
+              allowClear
+              className="w-full"
+              options={[
+                { label: 'Upcoming', value: 'upcoming' },
+                { label: 'Started', value: 'started' },
+                { label: 'Ended', value: 'ended' },
+              ]}
+            />
+          </Col>
+          {hasActiveFilters && (
+            <Col xs={24} sm={6} md={4} lg={3}>
+              <Button 
+                icon={<ReloadOutlined />} 
+                onClick={handleResetFilters}
+                className="w-full"
+              >
+                Reset
+              </Button>
+            </Col>
+          )}
+        </Row>
+
+        {/* Active Filter Chips */}
+        {hasActiveFilters && (
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100 text-xs">
+            <span className="text-gray-500 font-medium">Active Filters:</span>
+            {search && (
+              <Tag closable onClose={() => setSearch('')} color="blue">
+                Search: "{search}"
+              </Tag>
+            )}
+            {filters.category && (
+              <Tag closable onClose={() => handleFilterChange('category', undefined)} color="cyan">
+                Category: {filters.category.toUpperCase()}
+              </Tag>
+            )}
+            {filters.date && (
+              <Tag closable onClose={() => handleFilterChange('date', undefined)} color="purple">
+                Date: {filters.date}
+              </Tag>
+            )}
+            {filters.time && (
+              <Tag closable onClose={() => handleFilterChange('time', undefined)} color="magenta">
+                Time: {formatTime12h(filters.time)}
+              </Tag>
+            )}
+            {filters.status && (
+              <Tag closable onClose={() => handleFilterChange('status', undefined)} color="orange">
+                Status: {filters.status.toUpperCase()}
+              </Tag>
+            )}
+            {filters.type && (
+              <Tag closable onClose={() => handleFilterChange('type', undefined)} color="geekblue">
+                Type: {filters.type.toUpperCase()}
+              </Tag>
+            )}
+            {filters.stage && (
+              <Tag closable onClose={() => handleFilterChange('stage', undefined)} color="gold">
+                Stage: {filters.stage}
+              </Tag>
+            )}
+            <Button 
+              type="link" 
+              size="small" 
+              onClick={handleResetFilters}
+              className="!p-0 text-xs text-red-500"
+            >
+              Clear All
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
