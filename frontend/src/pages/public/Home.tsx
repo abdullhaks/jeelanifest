@@ -13,7 +13,8 @@ import { useModalStore } from '../../store/modalStore';
 import { GroupDetailModal } from '../../components/publiccomponents/GroupDetailModal';
 import { CircularGallery } from '../../components/publiccomponents/CircularGallery';
 import { MagicCard, MagicBento } from '../../components/publiccomponents/MagicBento';
-import { Trophy, Award, Users, Image as ImageIcon, BarChart3, Compass, Crown, Star } from 'lucide-react';
+import { Trophy, Award, Users, Image as ImageIcon, BarChart3, Compass, Crown, Star, RotateCw } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const groupColors = ['#0284C7', '#10B981', '#D97706', '#7C3AED', '#EC4899', '#06B6D4', '#8B5CF6'];
 
@@ -177,9 +178,21 @@ const Home = () => {
   const [chartGroups, setChartGroups] = useState<any[]>([]);
   const [chartMilestones, setChartMilestones] = useState<any[]>([]);
   const [galleryShowcaseItems, setGalleryShowcaseItems] = useState<any[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [timeAgo, setTimeAgo] = useState('Just now');
+
+  const updateRelativeTime = (time: Date) => {
+    const diffSec = Math.floor((Date.now() - time.getTime()) / 1000);
+    if (diffSec < 15) return 'Just now';
+    if (diffSec < 60) return `${diffSec}s ago`;
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
   const fetchGalleryShowcase = () => {
-    apiClient.get('/public/gallery?limit=10')
+    return apiClient.get('/public/gallery?limit=10')
       .then(res => {
         const raw = res.data?.data || res.data || [];
         if (Array.isArray(raw) && raw.length > 0) {
@@ -197,7 +210,7 @@ const Home = () => {
   };
 
   const fetchChartData = (filter: string) => {
-    apiClient.get('/public/dashboard/group-analytics', { params: { filter } })
+    return apiClient.get('/public/dashboard/group-analytics', { params: { filter } })
       .then(res => {
         if (res.data) {
           setChartGroups(res.data.groups || []);
@@ -207,24 +220,53 @@ const Home = () => {
       .catch(err => console.error(err));
   };
 
+  const handleRefresh = async (showToast = true) => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await Promise.allSettled([
+        fetchGroups(),
+        fetchStudents(),
+        fetchOngoing(),
+        fetchStats(),
+        fetchChartData(chartFilter),
+        fetchGalleryShowcase(),
+      ]);
+      const now = new Date();
+      setLastUpdated(now);
+      setTimeAgo('Just now');
+      if (showToast) {
+        toast.success('Live dashboard updated', {
+          id: 'home-refresh-toast',
+          duration: 2000,
+          style: {
+            background: '#0F172A',
+            color: '#F8FAFC',
+            borderRadius: '12px',
+            fontSize: '13px',
+            fontWeight: '600',
+            border: '1px solid rgba(255,255,255,0.1)',
+          },
+          icon: '⚡',
+        });
+      }
+    } catch (err) {
+      console.error('Error refreshing home data:', err);
+    } finally {
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 350);
+    }
+  };
+
   useEffect(() => {
-    fetchGroups();
-    fetchStudents();
-    fetchOngoing();
-    fetchStats();
-    fetchChartData(chartFilter);
-    fetchGalleryShowcase();
+    handleRefresh(false);
 
     const socketUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3000';
     const socket = io(socketUrl);
 
     const handleGlobalUpdate = () => {
-      fetchGroups();
-      fetchStudents();
-      fetchOngoing();
-      fetchStats();
-      fetchChartData(chartFilter);
-      fetchGalleryShowcase();
+      handleRefresh(false);
     };
 
     socket.on('points:updated', handleGlobalUpdate);
@@ -239,6 +281,14 @@ const Home = () => {
       window.removeEventListener('refresh-graphs', handleGlobalUpdate);
     };
   }, [chartFilter]);
+
+  // Update relative time periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeAgo(updateRelativeTime(lastUpdated));
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [lastUpdated]);
 
   // Auto-rotate hero slides
   useEffect(() => {
@@ -381,11 +431,26 @@ const Home = () => {
           transition={{ duration: 0.5 }}
           className="bg-white/95 backdrop-blur-xl border border-slate-200/90 shadow-md rounded-xl p-2 sm:p-3"
         >
-          <div className="flex items-center mb-1.5 px-1">
+          <div className="flex items-center justify-between mb-1.5 px-1">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1">
               <Compass size={12} className="text-sky-600 animate-spin-slow" />
-              Explore
+              Explore Quick Links
             </span>
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Updated {timeAgo}
+              </span>
+              <button
+                onClick={() => handleRefresh(true)}
+                disabled={isRefreshing}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-slate-100/90 hover:bg-sky-50 text-slate-700 hover:text-sky-600 border border-slate-200/80 hover:border-sky-300 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                title="Refresh live points & dashboard"
+              >
+                <RotateCw size={12} className={`text-sky-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>{isRefreshing ? 'Syncing...' : 'Refresh'}</span>
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-5 gap-1.5 sm:gap-2.5">
@@ -426,7 +491,17 @@ const Home = () => {
           <div className="lg:col-span-4 flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <SectionHeading title="Now Playing" titleAr="جارٍ الآن" centered={false} className="mb-0" />
-              <LiveBadge label="ON AIR" />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleRefresh(true)}
+                  disabled={isRefreshing}
+                  className="w-8 h-8 rounded-full bg-white border border-slate-200 hover:border-sky-300 text-slate-600 hover:text-sky-600 flex items-center justify-center transition-all shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
+                  title="Refresh Live Programs"
+                >
+                  <RotateCw size={13} className={`text-sky-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+                </button>
+                <LiveBadge label="ON AIR" />
+              </div>
             </div>
 
             <div className="flex-1 flex flex-col gap-3">
@@ -477,7 +552,18 @@ const Home = () => {
           <div className="lg:col-span-8 flex flex-col">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4">
               <SectionHeading title="Live Group Points Graph" titleAr="رسم بياني للمجموعات" centered={false} className="mb-0" />
-              <LiveBadge label="BIAXIAL LIVE" />
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => handleRefresh(true)}
+                  disabled={isRefreshing}
+                  className="px-3 py-1.5 rounded-full text-xs font-extrabold bg-white border border-slate-200 text-slate-700 hover:text-sky-600 hover:border-sky-300 shadow-xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                  title="Refresh Graph Data"
+                >
+                  <RotateCw size={13} className={`text-sky-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <span>Sync</span>
+                </button>
+                <LiveBadge label="BIAXIAL LIVE" />
+              </div>
             </div>
 
             <GlassCard className="p-6 bg-white border border-slate-200 shadow-sm flex-1 flex flex-col justify-between" hover={false}>
@@ -985,6 +1071,46 @@ const Home = () => {
           </GlassCard>
         </section>
       </div>
+
+      {/* ── FLOATING LIVE REFRESH BUTTON (IDEAL & ACCESSIBLE ACROSS VIEWPORT) ── */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.4 }}
+        className="fixed bottom-6 right-6 z-40"
+      >
+        <button
+          onClick={() => handleRefresh(true)}
+          disabled={isRefreshing}
+          aria-label="Refresh live scores and programs"
+          className={`group flex items-center gap-2.5 px-4 py-2.5 rounded-full backdrop-blur-xl border shadow-xl transition-all duration-300 transform active:scale-95 cursor-pointer ${
+            isRefreshing
+              ? 'bg-sky-950 text-white border-sky-400 shadow-sky-500/25 ring-2 ring-sky-400/30'
+              : 'bg-white/95 hover:bg-white text-slate-800 border-slate-200/90 hover:border-sky-300 shadow-slate-900/10 hover:shadow-sky-500/20 hover:-translate-y-0.5'
+          }`}
+        >
+          <span className="relative flex h-2.5 w-2.5">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isRefreshing ? 'bg-sky-400' : 'bg-emerald-400'}`} />
+            <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${isRefreshing ? 'bg-sky-400' : 'bg-emerald-500'}`} />
+          </span>
+
+          <RotateCw
+            size={16}
+            className={`text-sky-600 transition-transform duration-700 ${
+              isRefreshing ? 'animate-spin text-sky-400' : 'group-hover:rotate-180'
+            }`}
+          />
+
+          <div className="flex flex-col items-start text-left">
+            <span className="text-xs font-black tracking-wider uppercase leading-tight font-display">
+              {isRefreshing ? 'Syncing...' : 'Live Feed'}
+            </span>
+            <span className={`text-[10px] font-semibold leading-none ${isRefreshing ? 'text-sky-300' : 'text-slate-500'}`}>
+              {isRefreshing ? 'Updating...' : timeAgo}
+            </span>
+          </div>
+        </button>
+      </motion.div>
 
       {/* Group Detail Modal */}
       <GroupDetailModal
