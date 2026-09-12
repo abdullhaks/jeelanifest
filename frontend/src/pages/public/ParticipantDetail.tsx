@@ -18,6 +18,7 @@ import {
 import { motion } from 'framer-motion';
 import apiClient from '../../services/apiClient';
 import { LatticeBackground } from '../../components/publiccomponents/DesignSystem';
+import { StudentPosterModal } from '../../components/publiccomponents/StudentPosterModal';
 
 const ParticipantDetail = () => {
   const { id } = useParams();
@@ -25,6 +26,7 @@ const ParticipantDetail = () => {
   const [student, setStudent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [isPosterModalOpen, setIsPosterModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchStudent = async () => {
@@ -108,13 +110,19 @@ const ParticipantDetail = () => {
             <ArrowLeftOutlined /> Back to Roster
           </button>
 
-          {/* Quick Share Pill */}
+          {/* Quick Share & Poster Actions */}
           <div className="flex items-center gap-2">
             <button
-              onClick={handleNativeShare}
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-white text-xs font-black tracking-wide transition-all shadow-md shadow-amber-500/20 active:scale-95"
+              onClick={() => setIsPosterModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-black tracking-wide transition-all shadow-md shadow-amber-500/25 active:scale-95 cursor-pointer hover:scale-105"
             >
-              <ShareAltOutlined /> Share Profile
+              <PictureOutlined className="text-sm" /> Download Poster
+            </button>
+            <button
+              onClick={handleNativeShare}
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 border border-slate-200/90 hover:border-slate-300 text-slate-700 text-xs font-black tracking-wide transition-all shadow-sm active:scale-95 cursor-pointer"
+            >
+              <ShareAltOutlined /> Share
             </button>
           </div>
         </div>
@@ -170,11 +178,18 @@ const ParticipantDetail = () => {
                 </span>
               </div>
 
-              {/* Coordinator Share Action Toolbar */}
+              {/* Coordinator Share & Poster Action Toolbar */}
               <div className="mt-6 pt-5 border-t border-slate-100 flex flex-wrap items-center justify-center md:justify-start gap-3">
                 <button
+                  onClick={() => setIsPosterModalOpen(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs transition-all shadow-md shadow-amber-500/25 active:scale-95 cursor-pointer hover:scale-105"
+                >
+                  <PictureOutlined className="text-sm" /> Download Profile Poster
+                </button>
+
+                <button
                   onClick={handleNativeShare}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs font-bold transition-colors shadow-sm"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 text-xs font-bold transition-colors shadow-sm cursor-pointer"
                 >
                   <ShareAltOutlined /> Native Share
                 </button>
@@ -183,14 +198,14 @@ const ParticipantDetail = () => {
                   href={getWhatsAppShareUrl()}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition-colors shadow-sm"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition-colors shadow-sm cursor-pointer"
                 >
                   <WhatsAppOutlined /> Share on WhatsApp
                 </a>
 
                 <button
                   onClick={handleCopyLink}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-colors shadow-sm"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition-colors shadow-sm cursor-pointer"
                 >
                   {copied ? <CheckOutlined className="text-emerald-500" /> : <CopyOutlined />}
                   {copied ? 'Link Copied!' : 'Copy Page Link'}
@@ -400,6 +415,13 @@ const ParticipantDetail = () => {
           )}
         </div>
       </div>
+
+      {/* Student Profile Poster Modal */}
+      <StudentPosterModal
+        isOpen={isPosterModalOpen}
+        onClose={() => setIsPosterModalOpen(false)}
+        student={student}
+      />
     </div>
   );
 };
